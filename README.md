@@ -30,6 +30,13 @@ docker compose --profile web up --build
 
 Хеш пароля админа в `.env` пишите в одинарных кавычках. В `docker-compose.yml` символ `$` экранируется как `$$`.
 
+## Админ-API
+
+1. Сгенерируйте хеш: `npm run admin:hash -- <пароль>` и вставьте строку `ADMIN_PASSWORD_HASH='…'` в `.env`.
+2. Откройте Swagger: `http://localhost:3000/api/docs`.
+3. Выполните `POST /api/admin/auth/login` с `ADMIN_EMAIL` и паролем. Сервер ставит httpOnly-cookie, дальше Swagger отправляет её сам.
+4. Все остальные `/api/admin/*` без cookie отвечают `401 UNAUTHORIZED`. Вход ограничен 5 попытками в минуту.
+
 ## Запуск без Docker
 
 Нужны Node.js 24 и PostgreSQL.
@@ -58,6 +65,7 @@ npm run start:dev
 | `npm run format` / `format:check` | prettier |
 | `npm run db:generate` | генерация миграций Drizzle |
 | `npm run db:migrate` | применение миграций |
+| `npm run admin:hash -- <пароль>` | bcrypt-хеш для `ADMIN_PASSWORD_HASH` |
 | `npm run pre-commit` | prettier по staged → typecheck → lint |
 
 ## Pre-commit
