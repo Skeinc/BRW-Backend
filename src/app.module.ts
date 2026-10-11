@@ -6,6 +6,8 @@ import { StorageModule } from './common/storage/storage.module.js';
 import { validateEnv } from './config/validate-env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { CollectionsModule } from './modules/collections/collections.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 
 @Module({
@@ -19,6 +21,8 @@ import { HealthModule } from './modules/health/health.module.js';
     StorageModule,
     HealthModule,
     AdminAuthModule,
+    CategoriesModule,
+    CollectionsModule,
   ],
   providers: [
     {
