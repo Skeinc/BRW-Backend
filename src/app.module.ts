@@ -9,6 +9,7 @@ import { AdminAuthModule } from './modules/admin-auth/admin-auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CollectionsModule } from './modules/collections/collections.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 
 @Module({
@@ -25,6 +26,7 @@ import { ProductsModule } from './modules/products/products.module.js';
     CategoriesModule,
     CollectionsModule,
     ProductsModule,
+    OrdersModule,
   ],
   providers: [
     {
