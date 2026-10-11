@@ -10,6 +10,8 @@ import { AppModule } from './app.module.js';
 import { configureApp } from './common/setup/configure-app.js';
 import type { EnvironmentVariables } from './config/environment-variables.js';
 
+import { ADMIN_COOKIE_NAME } from './modules/admin-auth/admin-cookie-name.js';
+
 const MEDIA_CACHE_MAX_AGE = '1y';
 
 async function bootstrap(): Promise<void> {
@@ -29,6 +31,7 @@ async function bootstrap(): Promise<void> {
     .setTitle(packageJson.name)
     .setDescription(packageJson.description)
     .setVersion(packageJson.version)
+    .addCookieAuth(ADMIN_COOKIE_NAME)
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document, {
