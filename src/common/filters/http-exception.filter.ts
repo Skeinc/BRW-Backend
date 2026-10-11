@@ -109,6 +109,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
       [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
       [HttpStatus.CONFLICT]: 'CONFLICT',
+      [HttpStatus.PAYLOAD_TOO_LARGE]: 'PAYLOAD_TOO_LARGE',
+      [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'UNSUPPORTED_MEDIA_TYPE',
       [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
       [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
       [HttpStatus.SERVICE_UNAVAILABLE]: ErrorCode.SERVICE_UNAVAILABLE,
