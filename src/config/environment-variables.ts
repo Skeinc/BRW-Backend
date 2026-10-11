@@ -49,32 +49,14 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   CORS_ORIGIN: string;
 
+  /** Directory for uploaded media; created on first write. Relative paths resolve from the working directory. */
+  @IsString()
+  @IsNotEmpty()
+  UPLOADS_DIR: string = './uploads';
+
+  /** Browser-facing base URL of /media, for example http://localhost:3000/media. */
   @IsUrl({ require_protocol: true, require_tld: false })
-  S3_ENDPOINT: string;
-
-  @IsString()
-  @IsNotEmpty()
-  S3_REGION: string;
-
-  @IsString()
-  @IsNotEmpty()
-  S3_BUCKET: string;
-
-  @IsString()
-  @IsNotEmpty()
-  S3_ACCESS_KEY: string;
-
-  @IsString()
-  @IsNotEmpty()
-  S3_SECRET_KEY: string;
-
-  /** Browser-facing base URL of the bucket, for example http://localhost:9000/brw-media. */
-  @IsUrl({ require_protocol: true, require_tld: false })
-  S3_PUBLIC_URL: string;
-
-  @Transform(parseBoolean)
-  @IsBoolean()
-  S3_FORCE_PATH_STYLE: boolean = true;
+  PUBLIC_MEDIA_URL: string;
 
   @IsEmail()
   ADMIN_EMAIL: string;

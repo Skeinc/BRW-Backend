@@ -29,7 +29,7 @@ export class HealthController {
   ) {}
 
   /**
-   * Checks that the API can reach Postgres (select 1) and the S3 bucket (HeadBucket).
+   * Checks that the API can reach Postgres (select 1) and can write to the uploads directory.
    */
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -48,7 +48,7 @@ export class HealthController {
   async check(): Promise<HealthResponse> {
     const [isDatabaseUp, isStorageUp] = await Promise.all([
       this.isDatabaseReachable(),
-      this.storageService.isBucketReachable(),
+      this.storageService.isWritable(),
     ]);
     const response: HealthResponse = {
       status: toStatus(isDatabaseUp && isStorageUp),

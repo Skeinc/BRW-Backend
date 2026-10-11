@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -9,11 +10,21 @@ import { AppModule } from './app.module.js';
 import { configureApp } from './common/setup/configure-app.js';
 import type { EnvironmentVariables } from './config/environment-variables.js';
 
+const MEDIA_CACHE_MAX_AGE = '1y';
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
   const configService = app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
   configureApp(app);
+  // Uploaded media. Keys are unique per upload, so files never change and can be cached forever.
+  app.useStaticAssets(path.resolve(configService.getOrThrow('UPLOADS_DIR', { infer: true })), {
+    prefix: '/media',
+    index: false,
+    dotfiles: 'deny',
+    immutable: true,
+    maxAge: MEDIA_CACHE_MAX_AGE,
+  });
   const swaggerConfig = new DocumentBuilder()
     .setTitle(packageJson.name)
     .setDescription(packageJson.description)
@@ -39,6 +50,7 @@ async function bootstrap(): Promise<void> {
   logger.log(`API http://localhost:${port}/api`);
   logger.log(`Health http://localhost:${port}/api/health`);
   logger.log(`Swagger http://localhost:${port}/api/docs`);
+  logger.log(`Media http://localhost:${port}/media`);
 }
 
 await bootstrap();
