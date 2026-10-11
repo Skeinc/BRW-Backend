@@ -27,8 +27,13 @@ export class StorageService {
     const filePath: string = this.resolveKey(key);
     await mkdir(path.dirname(filePath), { recursive: true });
     const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-    await writeFile(tempPath, body);
-    await rename(tempPath, filePath);
+    try {
+      await writeFile(tempPath, body);
+      await rename(tempPath, filePath);
+    } catch (err) {
+      await rm(tempPath, { force: true });
+      throw err;
+    }
     return this.getPublicUrl(key);
   }
 
