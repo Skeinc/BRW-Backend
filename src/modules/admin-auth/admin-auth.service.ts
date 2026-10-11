@@ -54,6 +54,9 @@ export class AdminAuthService {
     }
     try {
       const payload: AdminTokenPayload = await this.jwtService.verifyAsync<AdminTokenPayload>(token);
+      if (payload.sub !== 'admin' || payload.email !== this.adminEmail) {
+        throw this.buildUnauthorized();
+      }
       return { email: payload.email };
     } catch {
       throw this.buildUnauthorized();

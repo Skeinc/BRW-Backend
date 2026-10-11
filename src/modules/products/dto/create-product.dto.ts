@@ -14,15 +14,12 @@ import {
   Min,
 } from 'class-validator';
 import { MONEY_PATTERN } from '../../../common/lib/money-pattern.js';
+import { stockStatus } from '../../../database/schema/stock-status.js';
 import { SLUG_PATTERN } from '../../../common/lib/slug-pattern.js';
 import { IsStringRecord } from './string-record.validator.js';
 
-export const STOCK_STATUSES = ['in_stock', 'on_order', 'out_of_stock'] as const;
-
 const MAX_DIMENSION_MM = 100_000;
 const MONEY_MESSAGE = 'must be a decimal string with up to 2 digits after the point, for example "1299.00"';
-
-export type StockStatusValue = (typeof STOCK_STATUSES)[number];
 
 export class CreateProductDto {
   /** The deepest category of the product; it also shows in all parent categories. */
@@ -69,10 +66,10 @@ export class CreateProductDto {
   @Matches(MONEY_PATTERN, { message: `oldPrice ${MONEY_MESSAGE}` })
   oldPrice?: string | null;
 
-  @ApiPropertyOptional({ enum: STOCK_STATUSES, default: 'in_stock' })
+  @ApiPropertyOptional({ enum: stockStatus.enumValues, default: 'in_stock' })
   @IsOptional()
-  @IsIn(STOCK_STATUSES)
-  stockStatus?: StockStatusValue;
+  @IsIn(stockStatus.enumValues)
+  stockStatus?: (typeof stockStatus.enumValues)[number];
 
   @ApiPropertyOptional({ description: 'Millimetres', nullable: true })
   @IsOptional()

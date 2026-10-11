@@ -13,6 +13,9 @@ import type { UploadedImageFile } from './product-images.types.js';
 
 const MAX_IMAGE_SIDE_PX = 1600;
 const WEBP_QUALITY = 82;
+// A 10 MB file can decode to far more pixels than it has bytes; refuse decompression bombs.
+const MAX_INPUT_PIXELS = 50_000_000;
+const SHARP_OPTIONS = { limitInputPixels: MAX_INPUT_PIXELS } as const;
 const ACCEPTED_FORMATS: readonly string[] = ['jpeg', 'png', 'webp'];
 
 /**
@@ -128,11 +131,11 @@ export class ProductImagesService {
 
   private async convertToWebp(buffer: Buffer): Promise<{ data: Buffer; info: OutputInfo }> {
     try {
-      const { format } = await sharp(buffer).metadata();
+      const { format } = await sharp(buffer, SHARP_OPTIONS).metadata();
       if (!format || !ACCEPTED_FORMATS.includes(format)) {
         throw this.buildInvalidImage('Only jpeg, png and webp images are accepted');
       }
-      return await sharp(buffer)
+      return await sharp(buffer, SHARP_OPTIONS)
         .rotate()
         .resize({ width: MAX_IMAGE_SIDE_PX, height: MAX_IMAGE_SIDE_PX, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: WEBP_QUALITY })
