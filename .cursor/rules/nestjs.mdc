@@ -1,0 +1,99 @@
+---
+description: NestJS and Drizzle architecture for BRW API
+alwaysApply: true
+---
+
+# NestJS
+
+Modular NestJS API. REST under `/api`. OpenAPI. No GraphQL.
+
+Dependency direction: controller → service → repository → database. A lower module does not import a higher one.
+
+## Layout
+
+```
+src/
+  main.ts
+  app.module.ts
+  config/
+  common/
+    errors/
+    filters/
+    lib/
+    setup/
+    storage/
+  database/
+    database.module.ts
+    schema/
+  modules/
+    health/
+    categories/
+    products/
+    orders/
+    seo/
+    admin-auth/
+```
+
+- `config/` — typed env (`EnvironmentVariables`) and fail-fast validation.
+- `common/` — infrastructure with no business domain: exception filter, error codes, S3 `storage/`, app setup shared with e2e tests, pure helpers in `common/lib/` (slugify, pagination). Do not leave generic helpers inside a feature repository.
+- `database/schema/` — Drizzle table files, one file per table. `drizzle-kit` migrations only. Never push or sync the schema at runtime.
+- `modules/` — business features.
+
+Do not add barrel `index.ts` files. Import the file directly.
+
+## Business module
+
+Keep the module **root thin**. Prefer grouping by concern in folders; do not pile many sibling files next to `*.module.ts`.
+
+### Root files (core of the feature)
+
+- `feature.module.ts`
+- `feature.service.ts` — business rules for the core entity
+- `feature.repository.ts` — Drizzle queries only (when the module owns table(s))
+- `feature.controller.ts` — public HTTP for the core entity
+- `feature.types.ts` — optional shared plain output types
+
+### Folders (always use when needed)
+
+- `dto/` — `class-validator` inputs. Outputs are plain types / `feature.types.ts`.
+- `guards/`, `decorators/`
+- `admin/` — admin controllers of the feature (`/api/admin/*`, behind the admin guard)
+
+### Subdomains (when the feature grows)
+
+Split by **domain name**, not by technical layer (`controllers/`, `services/` are forbidden):
+
+```
+products/
+  products.module.ts
+  products.controller.ts
+  products.service.ts
+  products.repository.ts
+  products.types.ts
+  dto/
+  admin/
+    admin-products.controller.ts
+  images/
+    product-images.controller.ts
+    product-images.service.ts
+```
+
+Keep related controller / service of a subdomain in the same folder. The Nest module stays one (`products.module.ts`) and wires providers from subfolders.
+
+### Examples
+
+- `categories/` — module + controller + service + repository + `dto/` + `admin/`.
+- `admin-auth/` — module + controller + service + `guards/` + `dto/` (no table → no repository).
+- `health/` — module + controller only (no table → no repository).
+
+`categories` owns the `category` table, `products` owns `product` and `product_image`. `products` may depend on `categories`; `categories` does not import `products` (counts come through a read-only repository method or an injected port). Cross-module use of `common/storage` is allowed.
+
+Skip a file that has nothing to do. Do not add `domain/`, `application/`, or `infrastructure/` layers inside a module.
+
+## API
+
+- Global `ValidationPipe`: `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true` (set in `common/setup/configure-app.ts`).
+- Errors: `{ code, message, details? }`. Domain failures throw `AppException` with `ErrorCode` from `common/errors` (not HTTP-status-only codes).
+- Money is `numeric` in the database and a **string** in the API (`"1299.00"`). No arithmetic on money with floats.
+- Never log or return secrets (passwords, tokens, S3 keys). Environment errors name the variable, never its value.
+- Swagger decorators on controller methods.

@@ -1,0 +1,55 @@
+---
+description: TypeScript style for BRW API
+alwaysApply: true
+---
+
+# TypeScript
+
+Senior TypeScript. Clean code and design patterns. English for all code and documentation.
+
+## Basic principles
+
+- Always declare the type of each variable and function (parameters and return value).
+- Avoid `any`. Create the necessary types.
+- Use JSDoc on public classes and methods.
+- Do not leave blank lines inside a function.
+- One export per file.
+
+## Names
+
+- PascalCase for classes.
+- camelCase for variables, functions, and methods.
+- kebab-case for file and directory names.
+- UPPER_SNAKE_CASE for environment variables.
+- No magic numbers. Define constants.
+- Start each function with a verb.
+- Booleans: `isLoading`, `hasError`, `canDelete`.
+- Full words, correct spelling. Allowed abbreviations: API, URL, `i`/`j` in loops, `err`, `ctx`, `req`, `res`, `next`.
+
+## Functions
+
+- A method follows the same rules as a function.
+- One purpose. Under 20 statements.
+- Name: verb plus object. Boolean return: `isX` / `hasX` / `canX`. No return value: `executeX` / `saveX`.
+- Avoid nesting: early return, extract helpers.
+- Prefer `map` / `filter` / `reduce` over nested loops.
+- Arrow functions under 3 statements. Named functions otherwise.
+- Default parameters instead of null checks.
+- RO-RO: pass many arguments as one object, return results as one object, with declared input and output types.
+- One level of abstraction per function.
+
+## Data
+
+- Do not pass raw primitives when a composite type is clearer.
+- Validate in classes, not in ad-hoc function checks.
+- Prefer immutability: `readonly` for data that does not change, `as const` for fixed literals.
+
+## Classes
+
+- SOLID. Composition over inheritance. Interfaces for contracts.
+- One purpose. Under 200 statements, under 10 public methods, under 10 properties.
+
+## Exceptions
+
+- Throw for unexpected failures.
+- Catch only to fix an expected case or to add context. Otherwise let the global filter handle it.
