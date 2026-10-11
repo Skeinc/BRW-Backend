@@ -3,10 +3,10 @@ dist
 .git
 .env
 .env.*
+uploads
 !.env.example
 coverage
 *.tsbuildinfo
-.cursor
 README.md
 Dockerfile
 .dockerignore

@@ -1,6 +1,6 @@
 # BRW-Backend
 
-REST API интернет-магазина мебели BRW (Black Red White). Стек: NestJS 12 + TypeScript (ESM) + Drizzle ORM + PostgreSQL + S3 (MinIO локально).
+REST API интернет-магазина мебели BRW (Black Red White). Стек: NestJS 12 + TypeScript (ESM) + Drizzle ORM + PostgreSQL + фото на локальном диске.
 
 Документация проекта: `../docs/BRW-dev-plan.md`. Фронтенд: `../BRW-Frontend`.
 
@@ -11,7 +11,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Поднимаются: `postgres` (порт 5434), `minio` (API 9000, консоль 9001), `minio-init` (создаёт бакет `brw-media` и открывает на чтение `products/` и `categories/`), `api` (порт 3000).
+Поднимаются: `postgres` (порт 5434), `api` (порт 3000; загруженные фото лежат в volume `uploads_data` и отдаются по `/media`).
 
 Проверка:
 
@@ -20,7 +20,7 @@ curl http://localhost:3000/api/health
 # { "status": "ok", "db": "ok", "storage": "ok" }
 ```
 
-Swagger: <http://localhost:3000/api/docs>. Консоль MinIO: <http://localhost:9001>.
+Swagger: <http://localhost:3000/api/docs>.
 
 Сервис `web` (фронтенд) подключается профилем, когда появится `../BRW-Frontend`:
 
@@ -32,16 +32,16 @@ docker compose --profile web up --build
 
 ## Запуск без Docker
 
-Нужны Node.js 24, PostgreSQL и S3-совместимое хранилище (например, MinIO).
+Нужны Node.js 24 и PostgreSQL.
 
 ```bash
 npm install
-cp .env.example .env   # DATABASE_URL и S3_ENDPOINT укажите на localhost
+cp .env.example .env   # DATABASE_URL укажите на localhost; фото пишутся в UPLOADS_DIR (по умолчанию ./uploads)
 npm run db:migrate
 npm run start:dev
 ```
 
-Можно поднять только инфраструктуру: `docker compose up postgres minio minio-init`.
+Можно поднять только инфраструктуру: `docker compose up postgres`.
 
 ## Переменные окружения
 
@@ -56,8 +56,6 @@ npm run start:dev
 | `npm run typecheck` | проверка типов (`tsc --noEmit`) |
 | `npm run lint` | oxlint (type-aware) |
 | `npm run format` / `format:check` | prettier |
-| `npm test` | unit-тесты (vitest) |
-| `npm run test:e2e` | e2e-тесты (нужны postgres, minio и `.env`) |
 | `npm run db:generate` | генерация миграций Drizzle |
 | `npm run db:migrate` | применение миграций |
 | `npm run pre-commit` | prettier по staged → typecheck → lint |
@@ -68,4 +66,4 @@ Husky запускает `npm run pre-commit` (`scripts/pre-commit.mjs`) пер�
 
 ## Правила
 
-Соглашения по коду: `.cursor/rules/*.mdc`. Коммиты: Conventional Commits. Основная ветка разработки: `develop`.
+Соглашения по коду: `CLAUDE.md`. Коммиты: Conventional Commits. Основная ветка разработки: `develop`.
