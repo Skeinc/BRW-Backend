@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync, type ValidationError } from 'class-validator';
 import { EnvironmentVariables } from './environment-variables.js';
+import { KNOWN_PLACEHOLDER_SECRETS } from './known-placeholder-secrets.js';
 
 function formatErrors(errors: ValidationError[]): string {
   return errors.map((error) => `- ${error.property}: ${Object.values(error.constraints ?? {}).join(', ')}`).join('\n');
@@ -15,6 +16,11 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   const errors: ValidationError[] = validateSync(validated);
   if (errors.length > 0) {
     throw new Error(`Invalid environment variables:\n${formatErrors(errors)}`);
+  }
+  if (validated.NODE_ENV === 'production' && KNOWN_PLACEHOLDER_SECRETS.includes(validated.JWT_SECRET)) {
+    throw new Error(
+      'Invalid environment variables:\n- JWT_SECRET: must not be a placeholder from the repo, generate one (openssl rand -hex 32)',
+    );
   }
   return validated;
 }

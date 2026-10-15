@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HealthController } from './health.controller.js';
 
+/** Wires the health feature. */
 @Module({
   controllers: [HealthController],
 })

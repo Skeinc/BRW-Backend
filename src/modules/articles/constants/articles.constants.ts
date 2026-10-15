@@ -1,0 +1,1 @@
+export const ARTICLE_SLUG_MAX_LENGTH = 160;

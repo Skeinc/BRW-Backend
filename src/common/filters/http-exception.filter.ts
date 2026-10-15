@@ -9,6 +9,7 @@ type ErrorBody = {
   details: unknown;
 };
 
+/** Maps any thrown error to the `{ code, message, details }` response body. */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);

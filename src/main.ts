@@ -7,6 +7,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import packageJson from '../package.json' with { type: 'json' };
 import { AppModule } from './app.module.js';
+import { ADMIN_COOKIE_NAME } from './modules/admin-auth/constants/admin-auth.constants.js';
 import { configureApp } from './common/setup/configure-app.js';
 import type { EnvironmentVariables } from './config/environment-variables.js';
 
@@ -29,12 +30,17 @@ async function bootstrap(): Promise<void> {
     .setTitle(packageJson.name)
     .setDescription(packageJson.description)
     .setVersion(packageJson.version)
+    .addCookieAuth(ADMIN_COOKIE_NAME)
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document, {
     useGlobalPrefix: true,
   });
   const expressApp = app.getHttpAdapter().getInstance();
+  const trustedProxies: number | undefined = configService.get('TRUST_PROXY', { infer: true });
+  if (trustedProxies !== undefined) {
+    expressApp.set('trust proxy', trustedProxies);
+  }
   expressApp.get('/', (_req: Request, res: Response) => {
     res.redirect('/api/docs');
   });

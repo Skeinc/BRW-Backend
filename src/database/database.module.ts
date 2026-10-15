@@ -6,6 +6,7 @@ import { DRIZZLE } from './drizzle.constant.js';
 import type { DrizzleDatabase } from './drizzle.types.js';
 import { schema } from './schema.js';
 
+/** Global module that provides the Drizzle database under the `DRIZZLE` token. */
 @Global()
 @Module({
   providers: [

@@ -6,17 +6,11 @@ import { ErrorCode } from '../../common/errors/error-code.js';
 import { StorageService } from '../../common/storage/storage.service.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
-
-type ComponentStatus = 'ok' | 'error';
-
-export type HealthResponse = {
-  status: ComponentStatus;
-  db: ComponentStatus;
-  storage: ComponentStatus;
-};
+import type { ComponentStatus, HealthResponse } from './types/health.types.js';
 
 const toStatus = (isUp: boolean): ComponentStatus => (isUp ? 'ok' : 'error');
 
+/** Liveness endpoint: reports API, database and storage status. */
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

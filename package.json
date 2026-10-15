@@ -20,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "prepare": "husky || true",
-    "pre-commit": "node scripts/pre-commit.mjs"
+    "pre-commit": "node scripts/pre-commit.mjs",
+    "admin:hash": "tsx scripts/admin-hash.ts"
   },
   "lint-staged": {
     "*.{ts,mjs,js}": "prettier --write"
@@ -29,20 +30,29 @@
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",
+    "@nestjs/jwt": "^12.0.3",
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/swagger": "^12.0.2",
+    "@nestjs/throttler": "^6.7.1",
+    "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4",
-    "drizzle-kit": "^0.18.1",
+    "cookie-parser": "^1.4.7",
+    "drizzle-kit": "^0.31.11",
     "drizzle-orm": "^0.45.3",
+    "multer": "^2.4.0",
     "postgres": "^3.4.9",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
     "@nestjs/schematics": "^12.0.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
@@ -50,6 +60,7 @@
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.2"
   }
 }

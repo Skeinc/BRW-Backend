@@ -71,6 +71,8 @@ src/
   app.module.ts
   config/
   common/
+    decorators/
+    dto/
     errors/
     filters/
     lib/
@@ -80,16 +82,19 @@ src/
     database.module.ts
     schema/
   modules/
-    health/
-    categories/
-    products/
-    orders/
-    seo/
     admin-auth/
+    articles/
+    categories/
+    collections/
+    health/
+    media/
+    orders/
+    products/
+    slug-redirects/
 ```
 
 - `config/` — typed env (`EnvironmentVariables`) and fail-fast validation.
-- `common/` — infrastructure with no business domain: exception filter, error codes, local-disk `storage/`, app setup (`configure-app.ts`), pure helpers in `common/lib/` (slugify, pagination). Do not leave generic helpers inside a feature repository.
+- `common/` — infrastructure with no business domain: exception filter, error codes, local-disk `storage/`, app setup (`configure-app.ts`), shared DTOs, pure helpers in `common/lib/` (slugify, pagination). Do not leave generic helpers inside a feature repository.
 - `database/schema/` — Drizzle table files, one file per table. `drizzle-kit` migrations only. Never push or sync the schema at runtime.
 - `modules/` — business features.
 
@@ -97,52 +102,62 @@ Do not add barrel `index.ts` files. Import the file directly.
 
 ## Business module
 
-Keep the module **root thin**. Prefer grouping by concern in folders; do not pile many sibling files next to `*.module.ts`.
+The module **root holds at most four files**: `feature.module.ts`, `feature.controller.ts`, `feature.service.ts`, `feature.repository.ts`. The controller is the root controller of the module and is always named `feature.controller.ts`. Everything else lives in a folder named by what it contains. Never put `*.types.ts`, `*.constants.ts`, DTOs, helpers or extra controllers next to the module file.
 
-### Root files (core of the feature)
+| File or folder | Content |
+| --- | --- |
+| `feature.module.ts` | Nest wiring |
+| `feature.controller.ts` | the main HTTP controller of the module. While there are no public endpoints it serves `/api/admin/*` (behind the admin guard). When public endpoints arrive it becomes the public controller and the admin one moves to `admin/` |
+| `feature.service.ts` | business rules of the core entity |
+| `feature.repository.ts` | Drizzle queries only; present only when the module owns table(s) |
+| `admin/` | additional admin controllers (`admin-*.controller.ts`, `/api/admin/*`, behind the admin guard) |
+| `dto/` | `class-validator` inputs. Outputs are plain types |
+| `types/` | `feature.types.ts`: plain output and input types |
+| `constants/` | `feature.constants.ts`: named constants, no magic numbers |
+| `lib/` | pure helpers and data structures (for example `category-tree.ts`) |
+| `guards/`, `decorators/` | Nest guards and decorators of the feature |
 
-- `feature.module.ts`
-- `feature.service.ts` — business rules for the core entity
-- `feature.repository.ts` — Drizzle queries only (when the module owns table(s))
-- `feature.controller.ts` — public HTTP for the core entity
-- `feature.types.ts` — optional shared plain output types
-
-### Folders (always use when needed)
-
-- `dto/` — `class-validator` inputs. Outputs are plain types / `feature.types.ts`.
-- `guards/`, `decorators/`
-- `admin/` — admin controllers of the feature (`/api/admin/*`, behind the admin guard)
+Skip a file or folder that has nothing to hold.
 
 ### Subdomains (when the feature grows)
 
-Split by **domain name**, not by technical layer (`controllers/`, `services/` are forbidden):
+Split by **domain name**, not by technical layer. A subdomain is a folder named after the domain and follows the same rule (controller, service and repository at its root, everything else in folders). The Nest module stays one and wires providers from the subfolders.
 
 ```
-products/
-  products.module.ts
-  products.controller.ts
-  products.service.ts
-  products.repository.ts
-  products.types.ts
-  dto/
+orders/
+  orders.module.ts
+  orders.controller.ts
+  orders.service.ts
+  orders.repository.ts
   admin/
-    admin-products.controller.ts
-  images/
-    product-images.controller.ts
-    product-images.service.ts
+  dto/
+  types/
+  constants/
+  payments/            # a subdomain, same shape
+    order-payments.controller.ts
+    order-payments.service.ts
+    order-payments.repository.ts
+    dto/
+    types/
 ```
 
-Keep related controller / service of a subdomain in the same folder. The Nest module stays one (`products.module.ts`) and wires providers from subfolders.
+No module has a subdomain yet; split one out only when a part of a module grows its own table and rules.
 
 ### Examples
 
-- `categories/` — module + controller + service + repository + `dto/` + `admin/`.
-- `admin-auth/` — module + controller + service + `guards/` + `dto/` (no table → no repository).
-- `health/` — module + controller only (no table → no repository).
+- `categories/` — module, controller, service, repository, plus `dto/`, `types/`, `constants/`, `lib/`.
+- `admin-auth/` — module, controller, service, plus `guards/`, `decorators/`, `dto/`, `types/`, `constants/` (no table, no repository).
+- `health/` — module and controller only (no table, no service).
+- `media/` — module, controller (text-content images), service, repository, plus `admin/` (the gallery controllers), `dto/`, `types/`, `constants/`, `lib/`.
 
-`categories` owns the `category` table, `products` owns `product` and `product_image`. `products` may depend on `categories`; `categories` does not import `products` (counts come through a read-only repository method or an injected port). Cross-module use of `common/storage` is allowed.
+### Module boundaries
 
-Skip a file that has nothing to do. Do not add `domain/`, `application/`, or `infrastructure/` layers inside a module.
+- `categories` owns `category`, `products` owns `product`, `articles` owns `article`. `products` may depend on `categories`; `categories` does not import `products` (counts come through a read-only repository method or an injected port).
+- `media` owns the `media_image` table and is the only module that converts, stores, lists and removes images. Products, categories, collections and articles do not store image columns: each owns a gallery addressed by `(entityType, entityId)`, the cover is the image with the lowest sort order. An entity module calls `MediaService` (`listImages`, `getCovers` for lists, `removeAllImages` when the entity is deleted). The gallery endpoints `/api/admin/{products|categories|collections|articles}/:id/images` are built by `createEntityImagesController` in `media/lib/`; to give a new entity a gallery add its type to the `media_entity_type` enum, to `OWNER_TABLES` in `media.repository.ts` and a controller file in `media/admin/`.
+- `slug-redirects` records renamed slugs for categories, collections, products and articles.
+- Cross-module use of `common/storage` is allowed.
+
+Do not add `domain/`, `application/`, or `infrastructure/` layers inside a module.
 
 ## API
 

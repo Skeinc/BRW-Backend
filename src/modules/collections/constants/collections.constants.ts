@@ -1,0 +1,1 @@
+export const COLLECTION_SLUG_MAX_LENGTH = 120;

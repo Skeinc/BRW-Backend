@@ -26,9 +26,10 @@ services:
       UPLOADS_DIR: /app/uploads
       PUBLIC_MEDIA_URL: ${PUBLIC_MEDIA_URL:-http://localhost:3000/media}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@brw.local}
-      # `$$` keeps the literal `$` of a bcrypt hash; the default is a placeholder, nobody can log in with it.
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-$$2b$$10$$ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0}
-      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      # Admin login: ADMIN_EMAIL + ADMIN_PASSWORD from .env. There is deliberately no default password.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env (the admin panel password)}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (a long random string, for example openssl rand -hex 32)}
+      TRUST_PROXY: ${TRUST_PROXY:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       - uploads_data:/app/uploads
@@ -42,10 +43,8 @@ services:
       retries: 6
       start_period: 20s
 
-  # The storefront lives in ../BRW-Frontend (stage 2). The profile keeps `docker compose up` working
-  # before that repo exists; start the full stack with `docker compose --profile web up --build`.
+  # The storefront lives in ../BRW-Frontend.
   web:
-    profiles: ["web"]
     build:
       context: ../BRW-Frontend
     ports:
@@ -54,6 +53,7 @@ services:
       PORT: "8080"
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
       API_INTERNAL_URL: http://api:3000
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:8080}
     depends_on:
       api:
         condition: service_healthy
