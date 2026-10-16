@@ -1,7 +1,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
 
 FROM node:24-alpine AS build
 WORKDIR /app
@@ -15,7 +15,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HUSKY=0
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
 COPY --from=build /app/dist ./dist
 COPY drizzle.config.ts ./
 COPY drizzle ./drizzle
