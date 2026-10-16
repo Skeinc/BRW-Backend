@@ -21,6 +21,11 @@ export class CategoryTree {
     });
   }
 
+  /** Number of direct children. */
+  getChildCount(id: string): number {
+    return this.childrenByParentId.get(id)?.length ?? 0;
+  }
+
   /** Depth of a category: 1 for a root. Returns 0 for an unknown id. */
   getDepth(id: string): number {
     let depth = 0;

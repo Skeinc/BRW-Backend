@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq } from 'drizzle-orm';
+import { asc, count, eq, max } from 'drizzle-orm';
+import type { SortOrderChange } from '../../common/lib/reorder-items.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { collection } from '../../database/schema/collection.js';
@@ -14,6 +15,21 @@ export class CollectionsRepository {
   /** All collections ordered by sort order and name. */
   async findAll(): Promise<CollectionRecord[]> {
     return this.db.select().from(collection).orderBy(asc(collection.sortOrder), asc(collection.name));
+  }
+
+  /** Sort order that puts a collection after the existing ones. */
+  async nextSortOrder(): Promise<number> {
+    const [row] = await this.db.select({ last: max(collection.sortOrder) }).from(collection);
+    return (row.last ?? -1) + 1;
+  }
+
+  /** Saves new sort orders in one transaction. */
+  async applySortOrders(changes: SortOrderChange[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      for (const change of changes) {
+        await tx.update(collection).set({ sortOrder: change.sortOrder }).where(eq(collection.id, change.id));
+      }
+    });
   }
 
   /** Finds one row by id, or undefined when it does not exist. */

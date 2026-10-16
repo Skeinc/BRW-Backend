@@ -1,7 +1,22 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { CollectionsService } from './collections.service.js';
+import { MoveItemDto } from '../../common/dto/move-item.dto.js';
+import type { PaginatedResult } from '../../common/lib/pagination.types.js';
 import type { CollectionDetailView, CollectionView } from './types/collections.types.js';
+import { ListCollectionsQueryDto } from './dto/list-collections-query.dto.js';
 import { CreateCollectionDto } from './dto/create-collection.dto.js';
 import { UpdateCollectionDto } from './dto/update-collection.dto.js';
 
@@ -13,11 +28,11 @@ import { UpdateCollectionDto } from './dto/update-collection.dto.js';
 export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
-  /** List all collections with productCount. */
+  /** One page of collections with productCount, filtered by name, publication state and contents. */
   @Get()
-  @ApiOperation({ summary: 'List all collections with productCount' })
-  list(): Promise<CollectionView[]> {
-    return this.collectionsService.list();
+  @ApiOperation({ summary: 'One page of collections with productCount, with search by name and filters' })
+  list(@Query() query: ListCollectionsQueryDto): Promise<PaginatedResult<CollectionView>> {
+    return this.collectionsService.list(query);
   }
 
   /** Get one collection. */
@@ -39,6 +54,14 @@ export class CollectionsController {
   @ApiOperation({ summary: 'Update a collection; a changed slug is kept as a redirect' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCollectionDto): Promise<CollectionDetailView> {
     return this.collectionsService.update(id, dto);
+  }
+
+  /** Move a collection to the position of another one (changes the sort order of those in between). */
+  @Patch(':id/move')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Put a collection where another one is now' })
+  move(@Param('id', ParseUUIDPipe) id: string, @Body() dto: MoveItemDto): Promise<void> {
+    return this.collectionsService.move({ id, overId: dto.overId });
   }
 
   /** Delete a collection without products (COLLECTION_NOT_EMPTY otherwise). */

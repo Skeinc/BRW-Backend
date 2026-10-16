@@ -35,8 +35,8 @@ Swagger: <http://localhost:3000/api/docs>.
 | Раздел | Маршруты |
 | --- | --- |
 | Вход | `POST auth/login` (5 попыток в минуту), `POST auth/logout`, `GET auth/me` |
-| Категории | CRUD `categories`, дерево до 3 уровней |
-| Коллекции | CRUD `collections` |
+| Категории | `categories`: страница дерева с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&depth`: страница это ровно pageSize строк дерева (родители перед детьми)), `GET tree` (всё дерево для выбора родителя), CRUD, `PATCH :id/move` (порядок среди соседей), до 3 уровней |
+| Коллекции | `collections`: страница списка с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&hasProducts`), CRUD, `PATCH :id/move` (порядок) |
 | Товары | CRUD `products`, список с фильтрами `categoryId`, `collectionId`, `q`, `isPublished` |
 | Статьи | CRUD `articles` |
 | Заявки | `GET orders`, `GET orders/:id`, `PATCH orders/:id` (смена статуса) |

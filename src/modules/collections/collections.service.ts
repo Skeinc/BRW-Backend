@@ -1,6 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppException } from '../../common/errors/app.exception.js';
 import { ErrorCode } from '../../common/errors/error-code.js';
+import { buildPaginatedResult } from '../../common/lib/build-paginated-result.js';
+import { moveItem, planSortOrders } from '../../common/lib/reorder-items.js';
+import type { PaginatedResult } from '../../common/lib/pagination.types.js';
 import { SlugTakenException } from '../../common/errors/slug-taken.exception.js';
 import { assertNoNullFields } from '../../common/lib/assert-no-null-fields.js';
 import { hasDefinedValues } from '../../common/lib/has-defined-values.js';
@@ -18,6 +21,7 @@ import type {
   CollectionView,
 } from './types/collections.types.js';
 import type { CreateCollectionDto } from './dto/create-collection.dto.js';
+import type { ListCollectionsQueryDto } from './dto/list-collections-query.dto.js';
 import type { UpdateCollectionDto } from './dto/update-collection.dto.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['description', 'seoTitle', 'seoDescription'];
@@ -31,21 +35,37 @@ export class CollectionsService {
     private readonly mediaService: MediaService,
   ) {}
 
-  /** All collections with their product counts. */
-  async list(): Promise<CollectionView[]> {
+  /** One page of collections by sort order, after the search and filters (a few dozen rows, filtered in memory). */
+  async list(query: ListCollectionsQueryDto): Promise<PaginatedResult<CollectionView>> {
+    const { page, pageSize } = query;
     const [records, counts] = await Promise.all([
       this.collectionsRepository.findAll(),
       this.collectionsRepository.countProductsByCollection(),
     ]);
+    const matching: CollectionRecord[] = records.filter((record) =>
+      this.matchesFilters({ record, productCount: counts.get(record.id) ?? 0, query }),
+    );
+    const pageRecords: CollectionRecord[] = matching.slice((page - 1) * pageSize, page * pageSize);
     const covers = await this.mediaService.getCovers({
       entityType: 'collection',
-      entityIds: records.map((record) => record.id),
+      entityIds: pageRecords.map((record) => record.id),
     });
-    return records.map((record) => ({
+    const items: CollectionView[] = pageRecords.map((record) => ({
       ...record,
       productCount: counts.get(record.id) ?? 0,
       cover: covers.get(record.id) ?? null,
     }));
+    return buildPaginatedResult({ items, page, pageSize, total: matching.length });
+  }
+
+  /** Puts a collection where `overId` is now and shifts the ones in between. */
+  async move({ id, overId }: { id: string; overId: string }): Promise<void> {
+    const records: CollectionRecord[] = await this.collectionsRepository.findAll();
+    if (!records.some((record) => record.id === id) || !records.some((record) => record.id === overId)) {
+      throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
+    }
+    const ordered: CollectionRecord[] = moveItem({ items: records, id, overId });
+    await this.collectionsRepository.applySortOrders(planSortOrders(ordered));
   }
 
   /** One collection; fails with 404 COLLECTION_NOT_FOUND. */
@@ -64,7 +84,8 @@ export class CollectionsService {
     });
     await this.assertSlugAvailable({ slug });
     try {
-      const record: CollectionRecord = await this.collectionsRepository.insert({ ...fields, slug });
+      const sortOrder: number = fields.sortOrder ?? (await this.collectionsRepository.nextSortOrder());
+      const record: CollectionRecord = await this.collectionsRepository.insert({ ...fields, slug, sortOrder });
       await this.slugRedirectsService.release({ entity: 'collection', slug });
       return await this.toView(record);
     } catch (err) {
@@ -114,6 +135,24 @@ export class CollectionsService {
   /** Throws 404 COLLECTION_NOT_FOUND unless the collection exists. Used by modules that attach products. */
   async assertExists(id: string): Promise<void> {
     await this.getRecordOrThrow(id);
+  }
+
+  private matchesFilters({
+    record,
+    productCount,
+    query,
+  }: {
+    record: CollectionRecord;
+    productCount: number;
+    query: ListCollectionsQueryDto;
+  }): boolean {
+    const { q, isPublished, hasProducts } = query;
+    const hasAnyProducts: boolean = productCount > 0;
+    return (
+      (q === undefined || record.name.toLowerCase().includes(q.toLowerCase())) &&
+      (isPublished === undefined || record.isPublished === isPublished) &&
+      (hasProducts === undefined || hasAnyProducts === hasProducts)
+    );
   }
 
   private async getRecordOrThrow(id: string): Promise<CollectionRecord> {

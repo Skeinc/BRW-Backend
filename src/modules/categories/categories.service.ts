@@ -1,6 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppException } from '../../common/errors/app.exception.js';
 import { ErrorCode } from '../../common/errors/error-code.js';
+import { buildPaginatedResult } from '../../common/lib/build-paginated-result.js';
+import { moveItem, planSortOrders } from '../../common/lib/reorder-items.js';
+import type { PaginatedResult } from '../../common/lib/pagination.types.js';
 import { SlugTakenException } from '../../common/errors/slug-taken.exception.js';
 import { assertNoNullFields } from '../../common/lib/assert-no-null-fields.js';
 import { hasDefinedValues } from '../../common/lib/has-defined-values.js';
@@ -11,9 +14,16 @@ import { MediaService } from '../media/media.service.js';
 import { SlugRedirectsService } from '../slug-redirects/slug-redirects.service.js';
 import { CATEGORY_SLUG_MAX_LENGTH, MAX_CATEGORY_DEPTH } from './constants/categories.constants.js';
 import { CategoriesRepository } from './categories.repository.js';
-import type { CategoryDetailView, CategoryPatch, CategoryRecord, CategoryView } from './types/categories.types.js';
+import type {
+  CategoryDetailView,
+  CategoryNode,
+  CategoryPatch,
+  CategoryRecord,
+  CategoryView,
+} from './types/categories.types.js';
 import { CategoryTree } from './lib/category-tree.js';
 import type { CreateCategoryDto } from './dto/create-category.dto.js';
+import type { ListCategoriesQueryDto } from './dto/list-categories-query.dto.js';
 import type { UpdateCategoryDto } from './dto/update-category.dto.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['parentId', 'description', 'seoTitle', 'seoDescription'];
@@ -27,22 +37,42 @@ export class CategoriesService {
     private readonly mediaService: MediaService,
   ) {}
 
-  /** The whole tree as a flat list in tree order, each item with its depth and product count. */
-  async list(): Promise<CategoryView[]> {
-    const [records, counts] = await Promise.all([
-      this.categoriesRepository.findAll(),
-      this.categoriesRepository.countProductsByCategory(),
-    ]);
-    const covers = await this.mediaService.getCovers({
-      entityType: 'category',
-      entityIds: records.map((record) => record.id),
-    });
-    return new CategoryTree(records).toOrderedList().map(({ record, depth }) => ({
-      ...record,
-      depth,
-      productCount: counts.get(record.id) ?? 0,
-      cover: covers.get(record.id) ?? null,
-    }));
+  /**
+   * One page of the tree: exactly `pageSize` rows of the flat tree order (parents first), after the search
+   * and filters, so `total` is the number of rows. A branch can continue on the next page. The tree is a few
+   * dozen rows, so it is filtered and paged in memory.
+   */
+  async list(query: ListCategoriesQueryDto): Promise<PaginatedResult<CategoryView>> {
+    const { page, pageSize } = query;
+    const matching: CategoryNode[] = this.filterNodes({ nodes: await this.loadTree(), query });
+    const pageNodes: CategoryNode[] = matching.slice((page - 1) * pageSize, page * pageSize);
+    const items: CategoryView[] = await this.attachCovers(pageNodes);
+    return buildPaginatedResult({ items, page, pageSize, total: matching.length });
+  }
+
+  /** The whole tree as a flat list in tree order: for parent pickers, where every category is needed. */
+  async listTree(): Promise<CategoryView[]> {
+    return this.attachCovers(await this.loadTree());
+  }
+
+  /** Puts a category where `overId` is now; both must have the same parent. */
+  async move({ id, overId }: { id: string; overId: string }): Promise<void> {
+    const records: CategoryRecord[] = await this.categoriesRepository.findAll();
+    const active: CategoryRecord | undefined = records.find((record) => record.id === id);
+    const over: CategoryRecord | undefined = records.find((record) => record.id === overId);
+    if (active === undefined || over === undefined) {
+      throw new AppException(ErrorCode.CATEGORY_NOT_FOUND, HttpStatus.NOT_FOUND, 'Category not found');
+    }
+    if (active.parentId !== over.parentId) {
+      throw new AppException(
+        ErrorCode.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+        'Categories can only be reordered among siblings',
+      );
+    }
+    const siblings: CategoryRecord[] = records.filter((record) => record.parentId === active.parentId);
+    const ordered: CategoryRecord[] = moveItem({ items: siblings, id, overId });
+    await this.categoriesRepository.applySortOrders(planSortOrders(ordered));
   }
 
   /** One category; fails with 404 CATEGORY_NOT_FOUND. */
@@ -63,8 +93,9 @@ export class CategoriesService {
     if (parentId !== null) {
       await this.assertCanPlaceUnder({ parentId });
     }
+    const sortOrder: number = fields.sortOrder ?? (await this.categoriesRepository.nextSortOrder(parentId));
     try {
-      const record: CategoryRecord = await this.categoriesRepository.insert({ ...fields, slug, parentId });
+      const record: CategoryRecord = await this.categoriesRepository.insert({ ...fields, slug, parentId, sortOrder });
       await this.slugRedirectsService.release({ entity: 'category', slug });
       return await this.toView(record);
     } catch (err) {
@@ -79,6 +110,7 @@ export class CategoriesService {
     const patch: CategoryPatch = Object.assign({}, dto);
     if (dto.parentId !== undefined && dto.parentId !== existing.parentId) {
       await this.assertCanMove({ id, parentId: dto.parentId });
+      patch.sortOrder ??= await this.categoriesRepository.nextSortOrder(dto.parentId ?? null);
     }
     const isSlugChanged: boolean = dto.slug !== undefined && dto.slug !== existing.slug;
     if (isSlugChanged && dto.slug !== undefined) {
@@ -136,15 +168,51 @@ export class CategoriesService {
     return record;
   }
 
+  /** Every category in tree order with depth, child and product counts, but without covers. */
+  private async loadTree(): Promise<CategoryNode[]> {
+    const [records, counts] = await Promise.all([
+      this.categoriesRepository.findAll(),
+      this.categoriesRepository.countProductsByCategory(),
+    ]);
+    const tree: CategoryTree = new CategoryTree(records);
+    return tree.toOrderedList().map(({ record, depth }) => ({
+      ...record,
+      depth,
+      childCount: tree.getChildCount(record.id),
+      productCount: counts.get(record.id) ?? 0,
+    }));
+  }
+
+  private filterNodes({ nodes, query }: { nodes: CategoryNode[]; query: ListCategoriesQueryDto }): CategoryNode[] {
+    const { q, isPublished, depth } = query;
+    const needle: string | undefined = q?.toLowerCase();
+    return nodes.filter(
+      (node) =>
+        (needle === undefined || node.name.toLowerCase().includes(needle)) &&
+        (isPublished === undefined || node.isPublished === isPublished) &&
+        (depth === undefined || node.depth === depth),
+    );
+  }
+
+  private async attachCovers(nodes: CategoryNode[]): Promise<CategoryView[]> {
+    const covers = await this.mediaService.getCovers({
+      entityType: 'category',
+      entityIds: nodes.map((node) => node.id),
+    });
+    return nodes.map((node) => ({ ...node, cover: covers.get(node.id) ?? null }));
+  }
+
   private async toView(record: CategoryRecord): Promise<CategoryDetailView> {
     const [records, productCount, images] = await Promise.all([
       this.categoriesRepository.findAll(),
       this.categoriesRepository.countProducts(record.id),
       this.mediaService.listImages({ entityType: 'category', entityId: record.id }),
     ]);
+    const tree: CategoryTree = new CategoryTree(records);
     return {
       ...record,
-      depth: new CategoryTree(records).getDepth(record.id),
+      depth: tree.getDepth(record.id),
+      childCount: tree.getChildCount(record.id),
       productCount,
       cover: getCover(images),
       images,

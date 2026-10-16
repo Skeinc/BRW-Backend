@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq } from 'drizzle-orm';
+import { asc, count, eq, isNull, max } from 'drizzle-orm';
+import type { SortOrderChange } from '../../common/lib/reorder-items.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { category } from '../../database/schema/category.js';
@@ -14,6 +15,24 @@ export class CategoriesRepository {
   /** All categories ordered by sort order and name. */
   async findAll(): Promise<CategoryRecord[]> {
     return this.db.select().from(category).orderBy(asc(category.sortOrder), asc(category.name));
+  }
+
+  /** Sort order that puts a category after the existing children of `parentId` (null for the top level). */
+  async nextSortOrder(parentId: string | null): Promise<number> {
+    const [row] = await this.db
+      .select({ last: max(category.sortOrder) })
+      .from(category)
+      .where(parentId === null ? isNull(category.parentId) : eq(category.parentId, parentId));
+    return (row.last ?? -1) + 1;
+  }
+
+  /** Saves new sort orders in one transaction. */
+  async applySortOrders(changes: SortOrderChange[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      for (const change of changes) {
+        await tx.update(category).set({ sortOrder: change.sortOrder }).where(eq(category.id, change.id));
+      }
+    });
   }
 
   /** Finds one row by id, or undefined when it does not exist. */
