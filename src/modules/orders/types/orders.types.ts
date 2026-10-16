@@ -19,6 +19,7 @@ export type OrderView = OrderRecord & {
 
 export type OrderListFilters = {
   status?: OrderStatus;
+  q?: string;
   page: number;
   pageSize: number;
 };

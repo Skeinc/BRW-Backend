@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, getTableColumns, ilike, type SQL } from 'drizzle-orm';
+import { buildContainsPattern } from '../../common/lib/build-contains-pattern.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { article } from '../../database/schema/article.js';
@@ -11,8 +12,6 @@ import type {
   NewArticleValues,
 } from './types/articles.types.js';
 
-const LIKE_SPECIAL_CHARACTERS = /[\\%_]/g;
-
 /** Drizzle queries for the `article` table. */
 @Injectable()
 export class ArticlesRepository {
@@ -21,7 +20,7 @@ export class ArticlesRepository {
   /** One page of rows (published or not), newest first, without the body text. */
   async findPage({ q, isPublished, page, pageSize }: ArticleListFilters): Promise<ArticleListRowsResult> {
     const where: SQL | undefined = and(
-      q === undefined ? undefined : ilike(article.title, `%${q.replace(LIKE_SPECIAL_CHARACTERS, '\\$&')}%`),
+      q === undefined ? undefined : ilike(article.title, buildContainsPattern(q)),
       isPublished === undefined ? undefined : eq(article.isPublished, isPublished),
     );
     const { content: _content, ...columns } = getTableColumns(article);

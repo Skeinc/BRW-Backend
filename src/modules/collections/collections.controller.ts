@@ -15,7 +15,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@
 import { CollectionsService } from './collections.service.js';
 import { MoveItemDto } from '../../common/dto/move-item.dto.js';
 import type { PaginatedResult } from '../../common/lib/pagination.types.js';
-import type { CollectionDetailView, CollectionView } from './types/collections.types.js';
+import type { CollectionDetailView, CollectionOption, CollectionView } from './types/collections.types.js';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto.js';
 import { CreateCollectionDto } from './dto/create-collection.dto.js';
 import { UpdateCollectionDto } from './dto/update-collection.dto.js';
@@ -33,6 +33,13 @@ export class CollectionsController {
   @ApiOperation({ summary: 'One page of collections with productCount, with search by name and filters' })
   list(@Query() query: ListCollectionsQueryDto): Promise<PaginatedResult<CollectionView>> {
     return this.collectionsService.list(query);
+  }
+
+  /** Every collection as id and name, for pickers. Declared before `:id`. */
+  @Get('options')
+  @ApiOperation({ summary: 'All collections as id and name in sort order, not paged' })
+  listOptions(): Promise<CollectionOption[]> {
+    return this.collectionsService.listOptions();
   }
 
   /** Get one collection. */

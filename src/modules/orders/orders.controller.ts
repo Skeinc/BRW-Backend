@@ -14,9 +14,11 @@ import type { OrderListItem, OrderView } from './types/orders.types.js';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  /** List order requests, newest first (filter by status). */
+  /** List order requests, newest first (filter by status, search by number, name or phone). */
   @Get()
-  @ApiOperation({ summary: 'List order requests, newest first (filter by status)' })
+  @ApiOperation({
+    summary: 'List order requests, newest first (filter by status, search by number, name or phone)',
+  })
   list(@Query() query: ListOrdersQueryDto): Promise<PaginatedResult<OrderListItem>> {
     return this.ordersService.list(query);
   }
@@ -28,9 +30,11 @@ export class OrdersController {
     return this.ordersService.get(id);
   }
 
-  /** Change the status of an order request. */
+  /** Change the status of an order request; only the allowed transitions are accepted. */
   @Patch(':id')
-  @ApiOperation({ summary: 'Change the status of an order request' })
+  @ApiOperation({
+    summary: 'Change the status of an order request (ORDER_STATUS_INVALID for a transition that is not allowed)',
+  })
   updateStatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateOrderStatusDto): Promise<OrderView> {
     return this.ordersService.updateStatus({ id, status: dto.status });
   }

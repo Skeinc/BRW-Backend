@@ -4,6 +4,7 @@ import { ErrorCode } from '../../common/errors/error-code.js';
 import { buildPaginatedResult } from '../../common/lib/build-paginated-result.js';
 import type { PaginatedResult } from '../../common/lib/pagination.types.js';
 import type { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
+import { ORDER_STATUS_TRANSITIONS } from './constants/orders.constants.js';
 import { OrdersRepository } from './orders.repository.js';
 import type { OrderListItem, OrderRecord, OrderStatus, OrderView } from './types/orders.types.js';
 
@@ -23,9 +24,20 @@ export class OrdersService {
     return this.toView(await this.getRecordOrThrow(id));
   }
 
-  /** Sets the status of an order. */
+  /** Sets the status of an order; fails with 409 ORDER_STATUS_INVALID when the order cannot move there. */
   async updateStatus({ id, status }: { id: string; status: OrderStatus }): Promise<OrderView> {
-    await this.getRecordOrThrow(id);
+    const existing: OrderRecord = await this.getRecordOrThrow(id);
+    if (existing.status === status) {
+      return this.toView(existing);
+    }
+    if (!ORDER_STATUS_TRANSITIONS[existing.status].includes(status)) {
+      throw new AppException(
+        ErrorCode.ORDER_STATUS_INVALID,
+        HttpStatus.CONFLICT,
+        `Order status cannot change from ${existing.status} to ${status}`,
+        { from: existing.status, to: status },
+      );
+    }
     return this.toView(await this.ordersRepository.updateStatus({ id, status }));
   }
 

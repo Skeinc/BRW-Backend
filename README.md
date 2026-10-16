@@ -36,10 +36,10 @@ Swagger: <http://localhost:3000/api/docs>.
 | --- | --- |
 | Вход | `POST auth/login` (5 попыток в минуту), `POST auth/logout`, `GET auth/me` |
 | Категории | `categories`: страница дерева с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&depth`: страница это ровно pageSize строк дерева (родители перед детьми)), `GET tree` (всё дерево для выбора родителя), CRUD, `PATCH :id/move` (порядок среди соседей), до 3 уровней |
-| Коллекции | `collections`: страница списка с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&hasProducts`), CRUD, `PATCH :id/move` (порядок) |
+| Коллекции | `collections`: страница списка с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&hasProducts`), `GET options` (все коллекции как id и название для выбора), CRUD, `PATCH :id/move` (порядок) |
 | Товары | CRUD `products`, список с фильтрами `categoryId`, `collectionId`, `q`, `isPublished` |
 | Статьи | CRUD `articles` |
-| Заявки | `GET orders`, `GET orders/:id`, `PATCH orders/:id` (смена статуса) |
+| Заявки | `GET orders` (фильтр `status`, поиск `q` по номеру, имени и телефону; телефон ищется и по цифрам, без учёта пробелов и скобок), `GET orders/:id`, `PATCH orders/:id` (смена статуса по цепочке `new → in_progress → done`, отмена; иначе `ORDER_STATUS_INVALID`) |
 | Фото | `products`, `categories`, `collections`, `articles`: `GET/POST /:id/images`, `PATCH /:id/images/order`, `PATCH/DELETE /:id/images/:imageId`; картинки в тексте статей: `POST/DELETE media/images` |
 
 Общие правила: slug строится из названия (кириллица транслитерируется) или задаётся явно, повтор даёт `409 SLUG_TAKEN`, смена slug сохраняет старый в `slug_redirect`. Цены передаются строками (`"1299.00"`). Ошибки приходят как `{ code, message, details }`.

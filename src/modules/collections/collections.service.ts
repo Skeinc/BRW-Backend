@@ -16,6 +16,7 @@ import { COLLECTION_SLUG_MAX_LENGTH } from './constants/collections.constants.js
 import { CollectionsRepository } from './collections.repository.js';
 import type {
   CollectionDetailView,
+  CollectionOption,
   CollectionPatch,
   CollectionRecord,
   CollectionView,
@@ -56,6 +57,12 @@ export class CollectionsService {
       cover: covers.get(record.id) ?? null,
     }));
     return buildPaginatedResult({ items, page, pageSize, total: matching.length });
+  }
+
+  /** Every collection as id and name in sort order, not paged: for pickers and filters. */
+  async listOptions(): Promise<CollectionOption[]> {
+    const records: CollectionRecord[] = await this.collectionsRepository.findAll();
+    return records.map(({ id, name }) => ({ id, name }));
   }
 
   /** Puts a collection where `overId` is now and shifts the ones in between. */

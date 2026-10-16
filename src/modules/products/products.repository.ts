@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { buildContainsPattern } from '../../common/lib/build-contains-pattern.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { category } from '../../database/schema/category.js';
@@ -12,8 +13,6 @@ import type {
   ProductPatch,
   ProductRecord,
 } from './types/products.types.js';
-
-const LIKE_SPECIAL_CHARACTERS = /[\\%_]/g;
 
 /** Drizzle queries for the `product` table. */
 @Injectable()
@@ -110,7 +109,7 @@ export class ProductsRepository {
 
   /** Case-insensitive substring match on name (served by the trigram index) or SKU. */
   private buildSearchCondition(q: string): SQL | undefined {
-    const pattern = `%${q.replace(LIKE_SPECIAL_CHARACTERS, '\\$&')}%`;
+    const pattern: string = buildContainsPattern(q);
     return or(ilike(product.name, pattern), ilike(product.sku, pattern));
   }
 }

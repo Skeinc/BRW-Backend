@@ -13,6 +13,9 @@ export type CollectionView = CollectionRecord & {
   cover: MediaCover | null;
 };
 
+/** Id and name of a collection, for pickers. */
+export type CollectionOption = Pick<CollectionRecord, 'id' | 'name'>;
+
 /** A collection with its full image gallery. */
 export type CollectionDetailView = CollectionView & {
   images: MediaImageView[];
