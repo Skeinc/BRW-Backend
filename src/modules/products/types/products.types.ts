@@ -31,11 +31,15 @@ export type ProductView = ProductRecord & {
   images: MediaImageView[];
 };
 
+/** A reason to look at a product again, shown as a health counter on the analytics page. */
+export type ProductIssue = 'out_of_stock' | 'no_photo' | 'no_collection' | 'not_ordered';
+
 export type ProductListFilters = {
   categoryId?: string;
   collectionId?: string;
   q?: string;
   isPublished?: boolean;
+  issue?: ProductIssue;
   page: number;
   pageSize: number;
 };

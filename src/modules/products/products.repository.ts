@@ -6,8 +6,11 @@ import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { category } from '../../database/schema/category.js';
 import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
+import { buildNoPhotoCondition } from './lib/build-no-photo-condition.js';
+import { buildNotOrderedCondition } from './lib/build-not-ordered-condition.js';
 import type {
   NewProductValues,
+  ProductIssue,
   ProductListFilters,
   ProductListRowsResult,
   ProductPatch,
@@ -85,14 +88,26 @@ export class ProductsRepository {
     await this.db.delete(product).where(eq(product.id, id));
   }
 
-  private buildWhere({ categoryId, collectionId, q, isPublished }: ProductListFilters): SQL | undefined {
+  private buildWhere({ categoryId, collectionId, q, isPublished, issue }: ProductListFilters): SQL | undefined {
     const conditions: (SQL | undefined)[] = [
       categoryId === undefined ? undefined : this.buildCategoryTreeCondition(categoryId),
       collectionId === undefined ? undefined : eq(product.collectionId, collectionId),
       isPublished === undefined ? undefined : eq(product.isPublished, isPublished),
       q === undefined ? undefined : this.buildSearchCondition(q),
+      issue === undefined ? undefined : this.buildIssueCondition(issue),
     ];
     return and(...conditions);
+  }
+
+  /** Same definitions as the catalog health counters of the analytics report. */
+  private buildIssueCondition(issue: ProductIssue): SQL {
+    const conditions: Record<ProductIssue, SQL> = {
+      out_of_stock: sql`${product.stockStatus} = 'out_of_stock'`,
+      no_photo: buildNoPhotoCondition(sql`${product.id}`),
+      no_collection: sql`${product.collectionId} IS NULL`,
+      not_ordered: buildNotOrderedCondition(sql`${product.id}`),
+    };
+    return conditions[issue];
   }
 
   /** Matches the category itself and every category below it. */

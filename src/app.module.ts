@@ -6,6 +6,7 @@ import { StorageModule } from './common/storage/storage.module.js';
 import { validateEnv } from './config/validate-env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { ArticlesModule } from './modules/articles/articles.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CollectionsModule } from './modules/collections/collections.module.js';
@@ -31,6 +32,7 @@ import { ProductsModule } from './modules/products/products.module.js';
     MediaModule,
     ProductsModule,
     OrdersModule,
+    AnalyticsModule,
     ArticlesModule,
   ],
   providers: [
