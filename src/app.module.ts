@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
+import { MailModule } from './common/mail/mail.module.js';
 import { StorageModule } from './common/storage/storage.module.js';
 import { validateEnv } from './config/validate-env.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -26,6 +27,7 @@ import { SeoModule } from './modules/seo/seo.module.js';
     }),
     DatabaseModule,
     StorageModule,
+    MailModule,
     HealthModule,
     AdminAuthModule,
     CategoriesModule,

@@ -105,4 +105,45 @@ export class EnvironmentVariables {
   @Transform(({ value }) => parseBoolean({ value: emptyToUndefined({ value }) }))
   @IsBoolean()
   SWAGGER_ENABLED?: boolean;
+
+  /** Where new order requests are emailed. Empty = no notifications. Needs SMTP_HOST. */
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsEmail()
+  ORDER_NOTIFY_EMAIL?: string;
+
+  /** SMTP server. Empty = email is disabled. */
+  @Transform(emptyToUndefined)
+  @ValidateIf((env: EnvironmentVariables) => env.ORDER_NOTIFY_EMAIL !== undefined || env.SMTP_HOST !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  SMTP_HOST?: string;
+
+  @Transform(emptyToUndefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PORT)
+  SMTP_PORT: number = 587;
+
+  /** true for implicit TLS (port 465); false for STARTTLS (port 587). */
+  @Transform(({ value }) => parseBoolean({ value: emptyToUndefined({ value }) }))
+  @IsBoolean()
+  SMTP_SECURE: boolean = false;
+
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  SMTP_USER?: string;
+
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  SMTP_PASSWORD?: string;
+
+  /** Sender address, for example `BRW <no-reply@brw.by>`. Defaults to SMTP_USER. */
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  MAIL_FROM?: string;
 }

@@ -96,6 +96,8 @@ npm run start:dev
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` / `ADMIN_PASSWORD_HASH` | вход в админку |
 | `JWT_SECRET` | подпись cookie админки (в production заготовка отклоняется) |
 | `TRUST_PROXY`, `COOKIE_SECURE` | за reverse proxy: число прокси и secure-cookie (в production `true`) |
+| `ORDER_NOTIFY_EMAIL` | почта менеджера, на которую приходит каждая новая заявка; пусто = писем нет |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | SMTP-сервер для писем (обязателен `SMTP_HOST`, если задан `ORDER_NOTIFY_EMAIL`) |
 | `SWAGGER_ENABLED` | Swagger на `/api/docs`; по умолчанию включён вне production и выключен в production |
 
 В API включены helmet, gzip-сжатие и лог каждого запроса (метод, URL, статус, время). Ошибки всегда приходят как `{ code, message, details }`.

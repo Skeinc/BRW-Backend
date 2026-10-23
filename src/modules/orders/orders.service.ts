@@ -1,8 +1,11 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AppException } from '../../common/errors/app.exception.js';
 import { ErrorCode } from '../../common/errors/error-code.js';
 import { buildPaginatedResult } from '../../common/lib/build-paginated-result.js';
 import type { PaginatedResult } from '../../common/lib/pagination.types.js';
+import { MailService } from '../../common/mail/mail.service.js';
+import type { EnvironmentVariables } from '../../config/environment-variables.js';
 import { fromMinorUnits } from '../../common/lib/from-minor-units.js';
 import { toMinorUnits } from '../../common/lib/to-minor-units.js';
 import { ProductsService } from '../products/products.service.js';
@@ -10,10 +13,12 @@ import type { ProductRecord } from '../products/types/products.types.js';
 import type { CreateOrderDto } from './dto/create-order.dto.js';
 import type { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
 import { MAX_LINE_QUANTITY, ORDER_STATUS_TRANSITIONS } from './constants/orders.constants.js';
+import { buildOrderNotification } from './lib/build-order-notification.js';
 import { OrdersRepository } from './orders.repository.js';
 import type {
   CreatedOrder,
   NewOrderLine,
+  NewOrderValues,
   OrderListItem,
   OrderRecord,
   OrderStatus,
@@ -24,9 +29,13 @@ import type {
 /** Order requests: the public checkout creates them, the admin browses them and changes the status. */
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly ordersRepository: OrdersRepository,
     private readonly productsService: ProductsService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService<EnvironmentVariables, true>,
   ) {}
 
   /**
@@ -45,21 +54,42 @@ export class OrdersService {
       quantity: quantities.get(record.id) ?? 0,
     }));
     const { contactName, phone, email, deliveryMethod, city, address, paymentMethod, comment } = dto;
-    const number: string = await this.ordersRepository.createWithLines({
-      values: {
-        contactName,
-        phone,
-        email,
-        deliveryMethod,
-        city: deliveryMethod === 'delivery' ? city : undefined,
-        address: deliveryMethod === 'delivery' ? address : undefined,
-        paymentMethod,
-        comment,
-        total: this.calculateTotal(lines),
-      },
-      lines,
-    });
+    const values: NewOrderValues = {
+      contactName,
+      phone,
+      email,
+      deliveryMethod,
+      city: deliveryMethod === 'delivery' ? city : undefined,
+      address: deliveryMethod === 'delivery' ? address : undefined,
+      paymentMethod,
+      comment,
+      total: this.calculateTotal(lines),
+    };
+    const number: string = await this.ordersRepository.createWithLines({ values, lines });
+    void this.notifyManager({ number, values, lines });
     return { number };
+  }
+
+  /** Emails the new order to ORDER_NOTIFY_EMAIL. A mail failure is logged and never fails the order. */
+  private async notifyManager({
+    number,
+    values,
+    lines,
+  }: {
+    number: string;
+    values: NewOrderValues;
+    lines: NewOrderLine[];
+  }): Promise<void> {
+    const to: string | undefined = this.configService.get('ORDER_NOTIFY_EMAIL', { infer: true });
+    if (to === undefined || !this.mailService.isEnabled) {
+      return;
+    }
+    try {
+      const { subject, text } = buildOrderNotification({ number, values, lines });
+      await this.mailService.send({ to, subject, text, replyTo: values.email ?? undefined });
+    } catch (error) {
+      this.logger.error(`Could not email order ${number}`, error instanceof Error ? error.stack : String(error));
+    }
   }
 
   /** A page of orders, optionally filtered by status. */
