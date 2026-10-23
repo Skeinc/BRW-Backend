@@ -18,5 +18,5 @@ export const MAX_ORDER_LINES = 50;
 export const MAX_LINE_QUANTITY = 99;
 export const ORDER_THROTTLE_LIMIT = 10;
 export const ORDER_THROTTLE_TTL_MS = 60_000;
-/** Mobile operator codes of Belarus accepted in the phone number. */
-export const BELARUS_PHONE_PATTERN = /^\+375(25|29|33|44)\d{7}$/;
+/** International number in E.164 form: a plus, a country code that does not start with 0, up to 15 digits in all. */
+export const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;

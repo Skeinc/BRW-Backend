@@ -19,7 +19,7 @@ import { emptyToUndefined } from '../../../common/transforms/empty-to-undefined.
 import { trimText } from '../../../common/transforms/trim-text.js';
 import { deliveryMethodEnum } from '../../../database/schema/delivery-method.enum.js';
 import { paymentMethodEnum } from '../../../database/schema/payment-method.enum.js';
-import { BELARUS_PHONE_PATTERN, MAX_ORDER_LINES } from '../constants/orders.constants.js';
+import { PHONE_PATTERN, MAX_ORDER_LINES } from '../constants/orders.constants.js';
 import { normalizePhone } from '../lib/normalize-phone.js';
 import { CreateOrderItemDto } from './create-order-item.dto.js';
 
@@ -42,9 +42,9 @@ export class CreateOrderDto {
   @MaxLength(NAME_MAX_LENGTH)
   contactName: string;
 
-  @ApiProperty({ example: '+375 (29) 123-45-67', description: 'Belarus mobile number, the mask is stripped' })
+  @ApiProperty({ example: '+375 (29) 123-45-67', description: 'International number, the mask is stripped' })
   @Transform(toNormalizedPhone)
-  @Matches(BELARUS_PHONE_PATTERN, { message: 'phone must be a Belarus mobile number like +375291234567' })
+  @Matches(PHONE_PATTERN, { message: 'phone must be an international number like +375291234567' })
   phone: string;
 
   @ApiPropertyOptional()
