@@ -30,6 +30,7 @@ export const product = pgTable(
     assemblyPdfKey: text('assembly_pdf_key'),
     attributes: jsonb('attributes').$type<Record<string, string>>().notNull().default({}),
     isPublished: boolean('is_published').notNull().default(false),
+    isHit: boolean('is_hit').notNull().default(false),
     seoTitle: varchar('seo_title', { length: 120 }),
     seoDescription: varchar('seo_description', { length: 320 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -129,6 +129,7 @@ export class ProductsService {
       colorBody: record.colorBody,
       colorFacade: record.colorFacade,
       attributes: record.attributes,
+      isHit: record.isHit,
       seoTitle: record.seoTitle,
       seoDescription: record.seoDescription,
       images,

@@ -64,6 +64,7 @@ export type PublicProductFilters = {
   colorBody?: string[];
   colorFacade?: string[];
   inStock?: boolean;
+  hit?: boolean;
 };
 
 /** A filter that a facet leaves out when it counts its own values. */
@@ -84,6 +85,7 @@ export type PublicProductListItem = {
   price: string;
   oldPrice: string | null;
   discountPercent: number | null;
+  isHit: boolean;
   stockStatus: ProductRecord['stockStatus'];
   coverImage: MediaCoverImage | null;
   category: NamedRef;
@@ -130,6 +132,7 @@ export type PublicProductDetail = Pick<
   | 'colorBody'
   | 'colorFacade'
   | 'attributes'
+  | 'isHit'
   | 'seoTitle'
   | 'seoDescription'
 > & {

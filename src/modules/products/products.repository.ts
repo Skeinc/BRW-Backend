@@ -102,6 +102,7 @@ export class ProductsRepository {
           price: product.price,
           oldPrice: product.oldPrice,
           stockStatus: product.stockStatus,
+          isHit: product.isHit,
           category: { id: category.id, slug: category.slug, name: category.name },
           collectionId: collection.id,
           collectionSlug: collection.slug,

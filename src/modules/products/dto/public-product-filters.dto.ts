@@ -69,6 +69,12 @@ export class PublicProductFiltersDto {
   @MaxLength(VALUE_MAX_LENGTH, { each: true })
   colorFacade?: string[];
 
+  @ApiPropertyOptional({ description: 'Only products marked as bestsellers in the admin panel' })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  hit?: boolean;
+
   @ApiPropertyOptional({ description: 'Only products that can be ordered (not out of stock)' })
   @IsOptional()
   @Transform(toBoolean)

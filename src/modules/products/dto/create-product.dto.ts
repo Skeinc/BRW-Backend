@@ -145,6 +145,11 @@ export class CreateProductDto {
   @IsBoolean()
   isPublished?: boolean;
 
+  @ApiPropertyOptional({ default: false, description: 'Shown in the bestsellers block of the storefront home page' })
+  @IsOptional()
+  @IsBoolean()
+  isHit?: boolean;
+
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @IsString()

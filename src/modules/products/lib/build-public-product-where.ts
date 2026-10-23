@@ -24,6 +24,7 @@ export function buildPublicProductWhere({ filters, omit }: BuildPublicProductWhe
     colorBody,
     colorFacade,
     inStock,
+    hit,
   } = filters;
   const use = (key: PublicProductFilterKey): boolean => omit !== key;
   return and(
@@ -40,6 +41,7 @@ export function buildPublicProductWhere({ filters, omit }: BuildPublicProductWhe
     colorBody !== undefined && use('colorBody') ? inArray(product.colorBody, colorBody) : undefined,
     colorFacade !== undefined && use('colorFacade') ? inArray(product.colorFacade, colorFacade) : undefined,
     inStock === true ? ne(product.stockStatus, 'out_of_stock') : undefined,
+    hit === true ? eq(product.isHit, true) : undefined,
   );
 }
 
