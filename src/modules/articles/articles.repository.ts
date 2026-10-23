@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, getTableColumns, ilike, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, getTableColumns, ilike, sql, type SQL } from 'drizzle-orm';
 import { buildContainsPattern } from '../../common/lib/build-contains-pattern.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
@@ -7,6 +7,7 @@ import { article } from '../../database/schema/article.js';
 import type {
   ArticleListFilters,
   ArticleListRowsResult,
+  PublicArticleFilters,
   ArticlePatch,
   ArticleRecord,
   NewArticleValues,
@@ -29,6 +30,21 @@ export class ArticlesRepository {
       .from(article)
       .where(where)
       .orderBy(desc(article.createdAt), desc(article.id))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    const [totalRow] = await this.db.select({ total: count() }).from(article).where(where);
+    return { rows, total: totalRow.total };
+  }
+
+  /** One page of published rows, most recently published first, without the body text. */
+  async findPublishedPage({ page, pageSize }: PublicArticleFilters): Promise<ArticleListRowsResult> {
+    const where: SQL = eq(article.isPublished, true);
+    const { content: _content, ...columns } = getTableColumns(article);
+    const rows = await this.db
+      .select(columns)
+      .from(article)
+      .where(where)
+      .orderBy(sql`${article.publishedAt} DESC NULLS LAST`, desc(article.createdAt), desc(article.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
     const [totalRow] = await this.db.select({ total: count() }).from(article).where(where);

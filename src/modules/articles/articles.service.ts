@@ -13,9 +13,17 @@ import { SlugRedirectsService } from '../slug-redirects/slug-redirects.service.j
 import { ARTICLE_SLUG_MAX_LENGTH } from './constants/articles.constants.js';
 import type { CreateArticleDto } from './dto/create-article.dto.js';
 import type { ListArticlesQueryDto } from './dto/list-articles-query.dto.js';
+import type { ListPublicArticlesQueryDto } from './dto/list-public-articles-query.dto.js';
 import type { UpdateArticleDto } from './dto/update-article.dto.js';
 import { ArticlesRepository } from './articles.repository.js';
-import type { ArticleListItem, ArticlePatch, ArticleRecord, ArticleView } from './types/articles.types.js';
+import type {
+  ArticleListItem,
+  ArticlePatch,
+  ArticleRecord,
+  ArticleView,
+  PublicArticleDetail,
+  PublicArticleListItem,
+} from './types/articles.types.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['excerpt', 'seoTitle', 'seoDescription', 'publishedAt'];
 
@@ -34,6 +42,45 @@ export class ArticlesService {
     const covers = await this.mediaService.getCovers({ entityType: 'article', entityIds: rows.map((row) => row.id) });
     const items: ArticleListItem[] = rows.map((row) => ({ ...row, cover: covers.get(row.id) ?? null }));
     return buildPaginatedResult({ items, page: query.page, pageSize: query.pageSize, total });
+  }
+
+  /** A page of published articles with cover images, without the body text. */
+  async listPublic({ page, pageSize }: ListPublicArticlesQueryDto): Promise<PaginatedResult<PublicArticleListItem>> {
+    const { rows, total } = await this.articlesRepository.findPublishedPage({ page, pageSize });
+    const covers = await this.mediaService.getCoverImages({
+      entityType: 'article',
+      entityIds: rows.map((row) => row.id),
+    });
+    const items: PublicArticleListItem[] = rows.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      excerpt: row.excerpt,
+      publishedAt: row.publishedAt,
+      coverImage: covers.get(row.id) ?? null,
+    }));
+    return buildPaginatedResult({ items, page, pageSize, total });
+  }
+
+  /** One published article with its body text; fails with 404 ARTICLE_NOT_FOUND. */
+  async getPublic(id: string): Promise<PublicArticleDetail> {
+    const record: ArticleRecord | undefined = await this.articlesRepository.findById(id);
+    if (record === undefined || !record.isPublished) {
+      throw new AppException(ErrorCode.ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND, 'Article not found');
+    }
+    const images = await this.mediaService.listImages({ entityType: 'article', entityId: id });
+    return {
+      id: record.id,
+      slug: record.slug,
+      title: record.title,
+      excerpt: record.excerpt,
+      content: record.content,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription,
+      publishedAt: record.publishedAt,
+      updatedAt: record.updatedAt,
+      images,
+    };
   }
 
   /** One article with its body text; fails with 404 ARTICLE_NOT_FOUND. */

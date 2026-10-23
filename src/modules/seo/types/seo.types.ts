@@ -13,6 +13,7 @@ export type SeoUrls = {
   categories: SeoUrl[];
   collections: SeoUrl[];
   products: SeoUrl[];
+  articles: SeoUrl[];
 };
 
 /** Current location of an entity whose old slug was requested. */

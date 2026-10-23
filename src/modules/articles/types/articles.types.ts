@@ -1,4 +1,4 @@
-import type { MediaCover, MediaImageView } from '../../media/types/media.types.js';
+import type { MediaCover, MediaCoverImage, MediaImageView } from '../../media/types/media.types.js';
 import type { article } from '../../../database/schema/article.js';
 
 export type ArticleRecord = typeof article.$inferSelect;
@@ -27,4 +27,22 @@ export type ArticleListFilters = {
 export type ArticleListRowsResult = {
   rows: Omit<ArticleRecord, 'content'>[];
   total: number;
+};
+
+/** One card of the storefront article list: no body text. */
+export type PublicArticleListItem = Pick<ArticleRecord, 'id' | 'slug' | 'title' | 'excerpt' | 'publishedAt'> & {
+  coverImage: MediaCoverImage | null;
+};
+
+/** A published article with its body text, photos and SEO texts. */
+export type PublicArticleDetail = Pick<
+  ArticleRecord,
+  'id' | 'slug' | 'title' | 'excerpt' | 'content' | 'seoTitle' | 'seoDescription' | 'publishedAt' | 'updatedAt'
+> & {
+  images: MediaImageView[];
+};
+
+export type PublicArticleFilters = {
+  page: number;
+  pageSize: number;
 };
