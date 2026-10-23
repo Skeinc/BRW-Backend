@@ -54,6 +54,8 @@ services:
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
       API_INTERNAL_URL: http://api:3000
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:8080}
+      PUBLIC_METRIKA_ID: ${PUBLIC_METRIKA_ID:-}
+      PUBLIC_GA4_ID: ${PUBLIC_GA4_ID:-}
     depends_on:
       api:
         condition: service_healthy
