@@ -20,7 +20,10 @@ import type {
   CollectionPatch,
   CollectionRecord,
   CollectionView,
+  PublicCollectionDetail,
+  PublicCollectionItem,
 } from './types/collections.types.js';
+import type { MediaCover } from '../media/types/media.types.js';
 import type { CreateCollectionDto } from './dto/create-collection.dto.js';
 import type { ListCollectionsQueryDto } from './dto/list-collections-query.dto.js';
 import type { UpdateCollectionDto } from './dto/update-collection.dto.js';
@@ -57,6 +60,39 @@ export class CollectionsService {
       cover: covers.get(record.id) ?? null,
     }));
     return buildPaginatedResult({ items, page, pageSize, total: matching.length });
+  }
+
+  /** Published collections in sort order with their published product count and cover. */
+  async listPublic(): Promise<PublicCollectionItem[]> {
+    const [records, counts] = await Promise.all([
+      this.collectionsRepository.findAll(),
+      this.collectionsRepository.countPublishedProductsByCollection(),
+    ]);
+    const published: CollectionRecord[] = records.filter((record) => record.isPublished);
+    const covers = await this.mediaService.getCovers({
+      entityType: 'collection',
+      entityIds: published.map((record) => record.id),
+    });
+    return published.map((record) => this.toPublicItem({ record, counts, covers }));
+  }
+
+  /** One published collection; fails with 404 COLLECTION_NOT_FOUND. */
+  async getPublic(id: string): Promise<PublicCollectionDetail> {
+    const record: CollectionRecord | undefined = await this.collectionsRepository.findById(id);
+    if (record === undefined || !record.isPublished) {
+      throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
+    }
+    const [counts, covers] = await Promise.all([
+      this.collectionsRepository.countPublishedProductsByCollection(),
+      this.mediaService.getCovers({ entityType: 'collection', entityIds: [id] }),
+    ]);
+    return {
+      ...this.toPublicItem({ record, counts, covers }),
+      description: record.description,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription,
+      breadcrumbs: [{ id: record.id, slug: record.slug, name: record.name }],
+    };
   }
 
   /** Every collection as id and name in sort order, not paged: for pickers and filters. */
@@ -142,6 +178,24 @@ export class CollectionsService {
   /** Throws 404 COLLECTION_NOT_FOUND unless the collection exists. Used by modules that attach products. */
   async assertExists(id: string): Promise<void> {
     await this.getRecordOrThrow(id);
+  }
+
+  private toPublicItem({
+    record,
+    counts,
+    covers,
+  }: {
+    record: CollectionRecord;
+    counts: Map<string, number>;
+    covers: Map<string, MediaCover>;
+  }): PublicCollectionItem {
+    return {
+      id: record.id,
+      slug: record.slug,
+      name: record.name,
+      imageUrl: covers.get(record.id)?.url ?? null,
+      productCount: counts.get(record.id) ?? 0,
+    };
   }
 
   private matchesFilters({

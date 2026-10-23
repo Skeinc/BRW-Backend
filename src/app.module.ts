@@ -14,6 +14,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
+import { SeoModule } from './modules/seo/seo.module.js';
 
 /** Root module: configuration, database, storage, health and every feature module. */
 @Module({
@@ -34,6 +35,7 @@ import { ProductsModule } from './modules/products/products.module.js';
     OrdersModule,
     AnalyticsModule,
     ArticlesModule,
+    SeoModule,
   ],
   providers: [
     {

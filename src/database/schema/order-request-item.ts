@@ -18,5 +18,8 @@ export const orderRequestItem = pgTable(
     unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull(),
     quantity: integer('qty').notNull(),
   },
-  (table) => [index('order_request_item_order_request_id_idx').on(table.orderRequestId)],
+  (table) => [
+    index('order_request_item_order_request_id_idx').on(table.orderRequestId),
+    index('order_request_item_product_id_idx').on(table.productId),
+  ],
 );

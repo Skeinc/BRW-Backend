@@ -29,6 +29,13 @@
       "when": 1792102489889,
       "tag": "0003_drop_legacy_images",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792745757965,
+      "tag": "0004_order_item_product_index",
+      "breakpoints": true
     }
   ]
 }

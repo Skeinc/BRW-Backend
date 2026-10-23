@@ -28,6 +28,13 @@ export type MediaCover = {
   thumbUrl: string;
 };
 
+/** Cover of an entity with the size and alt text the storefront needs to render it without layout shift. */
+export type MediaCoverImage = MediaCover & {
+  alt: string | null;
+  width: number;
+  height: number;
+};
+
 /** A converted image: the main webp (max 1600 px) and its small thumbnail. */
 export type ProcessedImage = {
   main: Buffer;

@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq, max } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, max, sql } from 'drizzle-orm';
 import type { SortOrderChange } from '../../common/lib/reorder-items.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
+import { buildVisibleCategoryIds } from '../categories/lib/build-visible-category-ids.js';
 import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
 import type { CollectionPatch, CollectionRecord, NewCollectionValues } from './types/collections.types.js';
@@ -72,6 +73,22 @@ export class CollectionsRepository {
     const rows = await this.db
       .select({ collectionId: product.collectionId, total: count() })
       .from(product)
+      .groupBy(product.collectionId);
+    return new Map(rows.flatMap((row) => (row.collectionId === null ? [] : [[row.collectionId, row.total] as const])));
+  }
+
+  /** Read-only: published product counts per collection id (collections without published products are absent). */
+  async countPublishedProductsByCollection(): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({ collectionId: product.collectionId, total: count() })
+      .from(product)
+      .where(
+        and(
+          eq(product.isPublished, true),
+          isNotNull(product.collectionId),
+          sql`${product.categoryId} IN ${buildVisibleCategoryIds()}`,
+        ),
+      )
       .groupBy(product.collectionId);
     return new Map(rows.flatMap((row) => (row.collectionId === null ? [] : [[row.collectionId, row.total] as const])));
   }

@@ -1,41 +1,26 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
-import type { PaginatedResult } from '../../common/lib/pagination.types.js';
-import { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
-import { UpdateOrderStatusDto } from './dto/update-order-status.dto.js';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { ApiConflictResponse, ApiOperation, ApiTags, ApiTooManyRequestsResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { ORDER_THROTTLE_LIMIT, ORDER_THROTTLE_TTL_MS } from './constants/orders.constants.js';
+import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrdersService } from './orders.service.js';
-import type { OrderListItem, OrderView } from './types/orders.types.js';
+import type { CreatedOrder } from './types/orders.types.js';
 
-/** HTTP endpoints of orders under `/api/admin/orders` (admin cookie required). */
-@ApiTags('admin-orders')
-@ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'UNAUTHORIZED: no valid admin cookie' })
-@Controller('admin/orders')
+/** Public HTTP endpoint of order requests under `/api/orders`. */
+@ApiTags('catalog')
+@Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  /** List order requests, newest first (filter by status, search by number, name or phone). */
-  @Get()
-  @ApiOperation({
-    summary: 'List order requests, newest first (filter by status, search by number, name or phone)',
-  })
-  list(@Query() query: ListOrdersQueryDto): Promise<PaginatedResult<OrderListItem>> {
-    return this.ordersService.list(query);
-  }
-
-  /** Get one order request with its lines. */
-  @Get(':id')
-  @ApiOperation({ summary: 'Get one order request with its lines' })
-  get(@Param('id', ParseUUIDPipe) id: string): Promise<OrderView> {
-    return this.ordersService.get(id);
-  }
-
-  /** Change the status of an order request; only the allowed transitions are accepted. */
-  @Patch(':id')
-  @ApiOperation({
-    summary: 'Change the status of an order request (ORDER_STATUS_INVALID for a transition that is not allowed)',
-  })
-  updateStatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateOrderStatusDto): Promise<OrderView> {
-    return this.ordersService.updateStatus({ id, status: dto.status });
+  /** Create an order request from the cart; prices and stock are checked on the server. */
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: ORDER_THROTTLE_LIMIT, ttl: ORDER_THROTTLE_TTL_MS } })
+  @ApiOperation({ summary: 'Create an order request (10 per minute per IP); returns { number } like BRW-000123' })
+  @ApiConflictResponse({ description: 'ORDER_ITEM_UNAVAILABLE: a product is unpublished or out of stock' })
+  @ApiTooManyRequestsResponse({ description: 'TOO_MANY_REQUESTS' })
+  create(@Body() dto: CreateOrderDto): Promise<CreatedOrder> {
+    return this.ordersService.create(dto);
   }
 }

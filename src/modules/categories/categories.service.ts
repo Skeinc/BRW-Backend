@@ -16,12 +16,19 @@ import { CATEGORY_SLUG_MAX_LENGTH, MAX_CATEGORY_DEPTH } from './constants/catego
 import { CategoriesRepository } from './categories.repository.js';
 import type {
   CategoryDetailView,
+  CategoryBreadcrumb,
   CategoryNode,
   CategoryPatch,
   CategoryRecord,
   CategoryView,
+  PublicCategoryDetail,
+  PublicCategoryNode,
 } from './types/categories.types.js';
+import { buildCategoryBreadcrumbs } from './lib/build-category-breadcrumbs.js';
+import { buildPublicCategoryTree } from './lib/build-public-category-tree.js';
 import { CategoryTree } from './lib/category-tree.js';
+import { filterVisibleCategories } from './lib/filter-visible-categories.js';
+import { findCategoryNode } from './lib/find-category-node.js';
 import type { CreateCategoryDto } from './dto/create-category.dto.js';
 import type { ListCategoriesQueryDto } from './dto/list-categories-query.dto.js';
 import type { UpdateCategoryDto } from './dto/update-category.dto.js';
@@ -48,6 +55,34 @@ export class CategoriesService {
     const pageNodes: CategoryNode[] = matching.slice((page - 1) * pageSize, page * pageSize);
     const items: CategoryView[] = await this.attachCovers(pageNodes);
     return buildPaginatedResult({ items, page, pageSize, total: matching.length });
+  }
+
+  /** Storefront tree: published categories only (a hidden parent hides its branch), with subtree product counts. */
+  async listPublic(): Promise<PublicCategoryNode[]> {
+    const { roots } = await this.loadPublicTree();
+    return roots;
+  }
+
+  /** One published category with its subtree and breadcrumbs; fails with 404 CATEGORY_NOT_FOUND. */
+  async getPublic(id: string): Promise<PublicCategoryDetail> {
+    const { roots, visible } = await this.loadPublicTree();
+    const node: PublicCategoryNode | undefined = findCategoryNode({ nodes: roots, id });
+    const record: CategoryRecord | undefined = visible.find((candidate) => candidate.id === id);
+    if (node === undefined || record === undefined) {
+      throw new AppException(ErrorCode.CATEGORY_NOT_FOUND, HttpStatus.NOT_FOUND, 'Category not found');
+    }
+    return {
+      ...node,
+      description: record.description,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription,
+      breadcrumbs: buildCategoryBreadcrumbs({ records: visible, id }),
+    };
+  }
+
+  /** Path from the root to a category, for the breadcrumbs of its products; empty when the id is unknown. */
+  async getBreadcrumbs(id: string): Promise<CategoryBreadcrumb[]> {
+    return buildCategoryBreadcrumbs({ records: await this.categoriesRepository.findAll(), id });
   }
 
   /** The whole tree as a flat list in tree order: for parent pickers, where every category is needed. */
@@ -181,6 +216,20 @@ export class CategoriesService {
       childCount: tree.getChildCount(record.id),
       productCount: counts.get(record.id) ?? 0,
     }));
+  }
+
+  private async loadPublicTree(): Promise<{ roots: PublicCategoryNode[]; visible: CategoryRecord[] }> {
+    const [records, directCounts] = await Promise.all([
+      this.categoriesRepository.findAll(),
+      this.categoriesRepository.countPublishedProductsByCategory(),
+    ]);
+    const visible: CategoryRecord[] = filterVisibleCategories(records);
+    const covers = await this.mediaService.getCovers({
+      entityType: 'category',
+      entityIds: visible.map((record) => record.id),
+    });
+    const imageUrls = new Map([...covers].map(([id, cover]) => [id, cover.url]));
+    return { roots: buildPublicCategoryTree({ records: visible, directCounts, imageUrls }), visible };
   }
 
   private filterNodes({ nodes, query }: { nodes: CategoryNode[]; query: ListCategoriesQueryDto }): CategoryNode[] {

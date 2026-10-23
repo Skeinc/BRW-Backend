@@ -10,6 +10,7 @@ import { MediaRepository } from './media.repository.js';
 import type {
   ImageRef,
   MediaCover,
+  MediaCoverImage,
   MediaEntityType,
   MediaImageRecord,
   MediaImageView,
@@ -49,6 +50,23 @@ export class MediaService {
   }): Promise<Map<string, MediaCover>> {
     const records: MediaImageRecord[] = await this.mediaRepository.findCovers({ entityType, entityIds });
     return new Map(records.map((record) => [record.entityId, this.toCover(record)]));
+  }
+
+  /** Like `getCovers`, but with width, height and alt for storefront cards. */
+  async getCoverImages({
+    entityType,
+    entityIds,
+  }: {
+    entityType: MediaEntityType;
+    entityIds: string[];
+  }): Promise<Map<string, MediaCoverImage>> {
+    const records: MediaImageRecord[] = await this.mediaRepository.findCovers({ entityType, entityIds });
+    return new Map(
+      records.map((record) => [
+        record.entityId,
+        { ...this.toCover(record), alt: record.alt, width: record.width, height: record.height },
+      ]),
+    );
   }
 
   /** Converts the upload to webp (main + thumbnail), stores both files and appends the image to the gallery. */

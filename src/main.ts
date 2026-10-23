@@ -40,6 +40,8 @@ async function bootstrap(): Promise<void> {
   const trustedProxies: number | undefined = configService.get('TRUST_PROXY', { infer: true });
   if (trustedProxies !== undefined) {
     expressApp.set('trust proxy', trustedProxies);
+  } else if (process.env.NODE_ENV === 'production') {
+    logger.warn('TRUST_PROXY is not set: behind a reverse proxy every client shares one rate-limit quota');
   }
   expressApp.get('/', (_req: Request, res: Response) => {
     res.redirect('/api/docs');

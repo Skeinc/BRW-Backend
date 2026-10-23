@@ -7,7 +7,7 @@ import type {
 } from './types/slug-redirects.types.js';
 
 /**
- * Keeps old links alive: a renamed slug is remembered and resolved to the entity id by the public API (stage 5).
+ * Keeps old links alive: a renamed slug is remembered and resolved to its current slug by `GET /api/seo/resolve`.
  */
 @Injectable()
 export class SlugRedirectsService {

@@ -1,5 +1,5 @@
 import type { product } from '../../../database/schema/product.js';
-import type { MediaCover, MediaImageView } from '../../media/types/media.types.js';
+import type { MediaCover, MediaCoverImage, MediaImageView } from '../../media/types/media.types.js';
 
 export type ProductRecord = typeof product.$inferSelect;
 
@@ -49,4 +49,99 @@ export type ProductListRow = Omit<ProductListItem, 'cover'>;
 export type ProductListRowsResult = {
   rows: ProductListRow[];
   total: number;
+};
+
+export type PublicProductSort = 'price_asc' | 'price_desc' | 'new' | 'popular';
+
+/** Storefront filters. `category` and `collection` are slugs; a category includes its subcategories. */
+export type PublicProductFilters = {
+  category?: string;
+  collection?: string;
+  q?: string;
+  priceMin?: string;
+  priceMax?: string;
+  material?: string[];
+  colorBody?: string[];
+  colorFacade?: string[];
+  inStock?: boolean;
+};
+
+/** A filter that a facet leaves out when it counts its own values. */
+export type PublicProductFilterKey = 'category' | 'collection' | 'price' | 'material' | 'colorBody' | 'colorFacade';
+
+export type NamedRef = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+/** One card of the storefront product list. Prices are numeric strings. */
+export type PublicProductListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  sku: string | null;
+  price: string;
+  oldPrice: string | null;
+  discountPercent: number | null;
+  stockStatus: ProductRecord['stockStatus'];
+  coverImage: MediaCoverImage | null;
+  category: NamedRef;
+  collection: NamedRef | null;
+};
+
+export type PublicProductRow = Omit<PublicProductListItem, 'coverImage' | 'discountPercent'>;
+
+export type PublicProductRowsResult = {
+  rows: PublicProductRow[];
+  total: number;
+};
+
+export type FacetValue = {
+  value: string;
+  count: number;
+};
+
+export type ProductFacets = {
+  price: { min: string | null; max: string | null };
+  collections: { slug: string; name: string; count: number }[];
+  materials: FacetValue[];
+  colorsBody: FacetValue[];
+  colorsFacade: FacetValue[];
+};
+
+/** A published product with its photos, category path and collection. */
+export type PublicProductDetail = Pick<
+  ProductRecord,
+  | 'id'
+  | 'slug'
+  | 'sku'
+  | 'name'
+  | 'description'
+  | 'price'
+  | 'oldPrice'
+  | 'stockStatus'
+  | 'widthMm'
+  | 'heightMm'
+  | 'heightMaxMm'
+  | 'depthMm'
+  | 'lengthMm'
+  | 'material'
+  | 'colorBody'
+  | 'colorFacade'
+  | 'attributes'
+  | 'seoTitle'
+  | 'seoDescription'
+> & {
+  discountPercent: number | null;
+  images: MediaImageView[];
+  category: NamedRef;
+  collection: NamedRef | null;
+  breadcrumbs: Pick<NamedRef, 'id' | 'slug' | 'name'>[];
+};
+
+export type PublicProductDetailRow = {
+  record: ProductRecord;
+  category: NamedRef;
+  collection: NamedRef | null;
 };

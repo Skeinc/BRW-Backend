@@ -8,21 +8,29 @@ import { hasDefinedValues } from '../../common/lib/has-defined-values.js';
 import { getUniqueViolationConstraint } from '../../common/lib/get-unique-violation-constraint.js';
 import { resolveSlugCandidate } from '../../common/lib/resolve-slug-candidate.js';
 import type { PaginatedResult } from '../../common/lib/pagination.types.js';
+import { calculateDiscountPercent } from '../../common/lib/calculate-discount-percent.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { CollectionsService } from '../collections/collections.service.js';
 import { MediaService } from '../media/media.service.js';
 import { SlugRedirectsService } from '../slug-redirects/slug-redirects.service.js';
 import type { CreateProductDto } from './dto/create-product.dto.js';
 import type { ListProductsQueryDto } from './dto/list-products-query.dto.js';
+import type { ListPublicProductsQueryDto } from './dto/list-public-products-query.dto.js';
+import type { PublicProductFiltersDto } from './dto/public-product-filters.dto.js';
 import type { UpdateProductDto } from './dto/update-product.dto.js';
 import { PRODUCT_SLUG_MAX_LENGTH } from './constants/products.constants.js';
 import { ProductsRepository } from './products.repository.js';
 import type {
+  ProductFacets,
   ProductListItem,
   ProductListRowsResult,
   ProductPatch,
   ProductRecord,
   ProductView,
+  PublicProductDetail,
+  PublicProductDetailRow,
+  PublicProductListItem,
+  PublicProductRowsResult,
 } from './types/products.types.js';
 
 const NULLABLE_FIELDS: readonly string[] = [
@@ -63,6 +71,76 @@ export class ProductsService {
     const covers = await this.mediaService.getCovers({ entityType: 'product', entityIds: rows.map((row) => row.id) });
     const items: ProductListItem[] = rows.map((row) => ({ ...row, cover: covers.get(row.id) ?? null }));
     return buildPaginatedResult({ items, page: query.page, pageSize: query.pageSize, total });
+  }
+
+  /** A page of published products matching the storefront filters and sort. */
+  async listPublic(query: ListPublicProductsQueryDto): Promise<PaginatedResult<PublicProductListItem>> {
+    const { sort, page, pageSize, ...filters } = query;
+    const { rows, total }: PublicProductRowsResult = await this.productsRepository.findPublicPage({
+      filters,
+      sort,
+      page,
+      pageSize,
+    });
+    const covers = await this.mediaService.getCoverImages({
+      entityType: 'product',
+      entityIds: rows.map((row) => row.id),
+    });
+    const items: PublicProductListItem[] = rows.map((row) => ({
+      ...row,
+      discountPercent: calculateDiscountPercent(row),
+      coverImage: covers.get(row.id) ?? null,
+    }));
+    return buildPaginatedResult({ items, page, pageSize, total });
+  }
+
+  /** Values available for each filter in the current selection. */
+  async getFacets(filters: PublicProductFiltersDto): Promise<ProductFacets> {
+    return this.productsRepository.findFacets(filters);
+  }
+
+  /** One published product; fails with 404 PRODUCT_NOT_FOUND for a missing or unpublished one. */
+  async getPublic(id: string): Promise<PublicProductDetail> {
+    const row: PublicProductDetailRow | undefined = await this.productsRepository.findPublishedDetail(id);
+    if (row === undefined) {
+      throw new AppException(ErrorCode.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND, 'Product not found');
+    }
+    const { record, category, collection } = row;
+    const [images, breadcrumbs] = await Promise.all([
+      this.mediaService.listImages({ entityType: 'product', entityId: id }),
+      this.categoriesService.getBreadcrumbs(category.id),
+    ]);
+    return {
+      id: record.id,
+      slug: record.slug,
+      sku: record.sku,
+      name: record.name,
+      description: record.description,
+      price: record.price,
+      oldPrice: record.oldPrice,
+      discountPercent: calculateDiscountPercent(record),
+      stockStatus: record.stockStatus,
+      widthMm: record.widthMm,
+      heightMm: record.heightMm,
+      heightMaxMm: record.heightMaxMm,
+      depthMm: record.depthMm,
+      lengthMm: record.lengthMm,
+      material: record.material,
+      colorBody: record.colorBody,
+      colorFacade: record.colorFacade,
+      attributes: record.attributes,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription,
+      images,
+      category,
+      collection,
+      breadcrumbs,
+    };
+  }
+
+  /** Published products among the given ids, for building an order; others are absent from the result. */
+  async findPublishedByIds(ids: string[]): Promise<ProductRecord[]> {
+    return this.productsRepository.findPublishedByIds(ids);
   }
 
   /** One product with its photos; fails with 404 PRODUCT_NOT_FOUND. */

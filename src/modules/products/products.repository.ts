@@ -1,20 +1,46 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  isNotNull,
+  max,
+  min,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { buildContainsPattern } from '../../common/lib/build-contains-pattern.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { category } from '../../database/schema/category.js';
 import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
+import { toCollectionRef } from './lib/to-collection-ref.js';
+import { buildVisibleCategoryIds } from '../categories/lib/build-visible-category-ids.js';
+import { buildPublicProductOrder } from './lib/build-public-product-order.js';
+import { buildPublicProductWhere } from './lib/build-public-product-where.js';
 import { buildNoPhotoCondition } from './lib/build-no-photo-condition.js';
 import { buildNotOrderedCondition } from './lib/build-not-ordered-condition.js';
 import type {
+  FacetValue,
   NewProductValues,
+  ProductFacets,
   ProductIssue,
   ProductListFilters,
   ProductListRowsResult,
   ProductPatch,
   ProductRecord,
+  PublicProductDetailRow,
+  PublicProductFilterKey,
+  PublicProductFilters,
+  PublicProductRowsResult,
+  PublicProductSort,
 } from './types/products.types.js';
 
 /** Drizzle queries for the `product` table. */
@@ -53,6 +79,108 @@ export class ProductsRepository {
     return { rows, total: totalRow.total };
   }
 
+  /** One page of published products matching the storefront filters, with category and collection refs. */
+  async findPublicPage({
+    filters,
+    sort,
+    page,
+    pageSize,
+  }: {
+    filters: PublicProductFilters;
+    sort: PublicProductSort;
+    page: number;
+    pageSize: number;
+  }): Promise<PublicProductRowsResult> {
+    const where: SQL | undefined = buildPublicProductWhere({ filters });
+    const [rows, [totalRow]] = await Promise.all([
+      this.db
+        .select({
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          sku: product.sku,
+          price: product.price,
+          oldPrice: product.oldPrice,
+          stockStatus: product.stockStatus,
+          category: { id: category.id, slug: category.slug, name: category.name },
+          collectionId: collection.id,
+          collectionSlug: collection.slug,
+          collectionName: collection.name,
+        })
+        .from(product)
+        .innerJoin(category, eq(category.id, product.categoryId))
+        .leftJoin(collection, and(eq(collection.id, product.collectionId), eq(collection.isPublished, true)))
+        .where(where)
+        .orderBy(...buildPublicProductOrder(sort))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      this.db.select({ total: count() }).from(product).where(where),
+    ]);
+    return {
+      rows: rows.map(({ collectionId, collectionSlug, collectionName, ...row }) => ({
+        ...row,
+        collection: toCollectionRef({ collectionId, collectionSlug, collectionName }),
+      })),
+      total: totalRow.total,
+    };
+  }
+
+  /** Values available for each filter, every one counted without its own filter. */
+  async findFacets(filters: PublicProductFilters): Promise<ProductFacets> {
+    const [price, collections, materials, colorsBody, colorsFacade] = await Promise.all([
+      this.findPriceRange(filters),
+      this.findCollectionFacet(filters),
+      this.countByColumn({ filters, column: product.material, omit: 'material' }),
+      this.countByColumn({ filters, column: product.colorBody, omit: 'colorBody' }),
+      this.countByColumn({ filters, column: product.colorFacade, omit: 'colorFacade' }),
+    ]);
+    return { price, collections, materials, colorsBody, colorsFacade };
+  }
+
+  /** A published product with its category and collection refs, or undefined. */
+  async findPublishedDetail(id: string): Promise<PublicProductDetailRow | undefined> {
+    const [row] = await this.db
+      .select({
+        record: getTableColumns(product),
+        category: { id: category.id, slug: category.slug, name: category.name },
+        collectionId: collection.id,
+        collectionSlug: collection.slug,
+        collectionName: collection.name,
+      })
+      .from(product)
+      .innerJoin(category, eq(category.id, product.categoryId))
+      .leftJoin(collection, and(eq(collection.id, product.collectionId), eq(collection.isPublished, true)))
+      .where(
+        and(
+          eq(product.id, id),
+          eq(product.isPublished, true),
+          sql`${product.categoryId} IN ${buildVisibleCategoryIds()}`,
+        ),
+      );
+    if (row === undefined) {
+      return undefined;
+    }
+    const { collectionId, collectionSlug, collectionName, ...rest } = row;
+    return { ...rest, collection: toCollectionRef({ collectionId, collectionSlug, collectionName }) };
+  }
+
+  /** Published products of visible categories among the given ids; unknown and unpublished ids are simply absent. */
+  async findPublishedByIds(ids: string[]): Promise<ProductRecord[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    return this.db
+      .select()
+      .from(product)
+      .where(
+        and(
+          inArray(product.id, ids),
+          eq(product.isPublished, true),
+          sql`${product.categoryId} IN ${buildVisibleCategoryIds()}`,
+        ),
+      );
+  }
+
   /** Finds one row by id, or undefined when it does not exist. */
   async findById(id: string): Promise<ProductRecord | undefined> {
     const [record] = await this.db.select().from(product).where(eq(product.id, id));
@@ -86,6 +214,42 @@ export class ProductsRepository {
   /** Deletes a row by id. */
   async delete(id: string): Promise<void> {
     await this.db.delete(product).where(eq(product.id, id));
+  }
+
+  private async findPriceRange(filters: PublicProductFilters): Promise<ProductFacets['price']> {
+    const [row] = await this.db
+      .select({ min: min(product.price), max: max(product.price) })
+      .from(product)
+      .where(buildPublicProductWhere({ filters, omit: 'price' }));
+    return { min: row.min, max: row.max };
+  }
+
+  private async findCollectionFacet(filters: PublicProductFilters): Promise<ProductFacets['collections']> {
+    return this.db
+      .select({ slug: collection.slug, name: collection.name, count: count() })
+      .from(product)
+      .innerJoin(collection, eq(collection.id, product.collectionId))
+      .where(and(buildPublicProductWhere({ filters, omit: 'collection' }), eq(collection.isPublished, true)))
+      .groupBy(collection.id)
+      .orderBy(asc(collection.sortOrder), asc(collection.name));
+  }
+
+  private async countByColumn({
+    filters,
+    column,
+    omit,
+  }: {
+    filters: PublicProductFilters;
+    column: typeof product.material | typeof product.colorBody | typeof product.colorFacade;
+    omit: PublicProductFilterKey;
+  }): Promise<FacetValue[]> {
+    const rows = await this.db
+      .select({ value: column, count: count() })
+      .from(product)
+      .where(and(buildPublicProductWhere({ filters, omit }), isNotNull(column)))
+      .groupBy(column)
+      .orderBy(asc(column));
+    return rows.flatMap((row) => (row.value === null ? [] : [{ value: row.value, count: row.count }]));
   }
 
   private buildWhere({ categoryId, collectionId, q, isPublished, issue }: ProductListFilters): SQL | undefined {

@@ -20,3 +20,15 @@ export type CollectionOption = Pick<CollectionRecord, 'id' | 'name'>;
 export type CollectionDetailView = CollectionView & {
   images: MediaImageView[];
 };
+
+/** A published collection in the storefront list. */
+export type PublicCollectionItem = Pick<CollectionRecord, 'id' | 'slug' | 'name'> & {
+  imageUrl: string | null;
+  productCount: number;
+};
+
+/** A published collection with its texts and breadcrumbs (the collection itself). */
+export type PublicCollectionDetail = PublicCollectionItem &
+  Pick<CollectionRecord, 'description' | 'seoTitle' | 'seoDescription'> & {
+    breadcrumbs: Pick<CollectionRecord, 'id' | 'slug' | 'name'>[];
+  };

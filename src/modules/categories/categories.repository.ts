@@ -84,4 +84,14 @@ export class CategoriesRepository {
       .groupBy(product.categoryId);
     return new Map(rows.map((row) => [row.categoryId, row.total]));
   }
+
+  /** Read-only: published product counts per category id, products directly in the category only. */
+  async countPublishedProductsByCategory(): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({ categoryId: product.categoryId, total: count() })
+      .from(product)
+      .where(eq(product.isPublished, true))
+      .groupBy(product.categoryId);
+    return new Map(rows.map((row) => [row.categoryId, row.total]));
+  }
 }

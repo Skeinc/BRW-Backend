@@ -3,15 +3,64 @@ import { AppException } from '../../common/errors/app.exception.js';
 import { ErrorCode } from '../../common/errors/error-code.js';
 import { buildPaginatedResult } from '../../common/lib/build-paginated-result.js';
 import type { PaginatedResult } from '../../common/lib/pagination.types.js';
+import { fromMinorUnits } from '../../common/lib/from-minor-units.js';
+import { toMinorUnits } from '../../common/lib/to-minor-units.js';
+import { ProductsService } from '../products/products.service.js';
+import type { ProductRecord } from '../products/types/products.types.js';
+import type { CreateOrderDto } from './dto/create-order.dto.js';
 import type { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
-import { ORDER_STATUS_TRANSITIONS } from './constants/orders.constants.js';
+import { MAX_LINE_QUANTITY, ORDER_STATUS_TRANSITIONS } from './constants/orders.constants.js';
 import { OrdersRepository } from './orders.repository.js';
-import type { OrderListItem, OrderRecord, OrderStatus, OrderView } from './types/orders.types.js';
+import type {
+  CreatedOrder,
+  NewOrderLine,
+  OrderListItem,
+  OrderRecord,
+  OrderStatus,
+  OrderView,
+  UnavailableItem,
+} from './types/orders.types.js';
 
-/** Admin view of order requests: browse and change status. Orders are created by the public API (stage 5). */
+/** Order requests: the public checkout creates them, the admin browses them and changes the status. */
 @Injectable()
 export class OrdersService {
-  constructor(private readonly ordersRepository: OrdersRepository) {}
+  constructor(
+    private readonly ordersRepository: OrdersRepository,
+    private readonly productsService: ProductsService,
+  ) {}
+
+  /**
+   * Creates an order request from the storefront cart. Names, SKUs and prices come from the database; products that
+   * are unpublished or out of stock fail the whole request with 409 ORDER_ITEM_UNAVAILABLE.
+   */
+  async create(dto: CreateOrderDto): Promise<CreatedOrder> {
+    const quantities: Map<string, number> = this.mergeQuantities(dto);
+    const products: ProductRecord[] = await this.productsService.findPublishedByIds([...quantities.keys()]);
+    this.assertAllAvailable({ quantities, products });
+    const lines: NewOrderLine[] = products.map((record) => ({
+      productId: record.id,
+      name: record.name,
+      sku: record.sku,
+      unitPrice: record.price,
+      quantity: quantities.get(record.id) ?? 0,
+    }));
+    const { contactName, phone, email, deliveryMethod, city, address, paymentMethod, comment } = dto;
+    const number: string = await this.ordersRepository.createWithLines({
+      values: {
+        contactName,
+        phone,
+        email,
+        deliveryMethod,
+        city: deliveryMethod === 'delivery' ? city : undefined,
+        address: deliveryMethod === 'delivery' ? address : undefined,
+        paymentMethod,
+        comment,
+        total: this.calculateTotal(lines),
+      },
+      lines,
+    });
+    return { number };
+  }
 
   /** A page of orders, optionally filtered by status. */
   async list(query: ListOrdersQueryDto): Promise<PaginatedResult<OrderListItem>> {
@@ -39,6 +88,50 @@ export class OrdersService {
       );
     }
     return this.toView(await this.ordersRepository.updateStatus({ id, status }));
+  }
+
+  /** Sums the quantities of repeated products; the sum may not exceed the per-line limit. */
+  private mergeQuantities({ items }: CreateOrderDto): Map<string, number> {
+    const quantities = new Map<string, number>();
+    items.forEach(({ productId, qty }) => quantities.set(productId, (quantities.get(productId) ?? 0) + qty));
+    if ([...quantities.values()].some((qty) => qty > MAX_LINE_QUANTITY)) {
+      throw new AppException(
+        ErrorCode.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+        `A product can be ordered at most ${MAX_LINE_QUANTITY} times`,
+      );
+    }
+    return quantities;
+  }
+
+  private assertAllAvailable({
+    quantities,
+    products,
+  }: {
+    quantities: Map<string, number>;
+    products: ProductRecord[];
+  }): void {
+    const recordsById = new Map(products.map((record) => [record.id, record]));
+    const unavailable: UnavailableItem[] = [...quantities.keys()].flatMap((productId): UnavailableItem[] => {
+      const record: ProductRecord | undefined = recordsById.get(productId);
+      if (record === undefined) {
+        return [{ productId, reason: 'not_found' }];
+      }
+      return record.stockStatus === 'out_of_stock' ? [{ productId, reason: 'out_of_stock' }] : [];
+    });
+    if (unavailable.length > 0) {
+      throw new AppException(
+        ErrorCode.ORDER_ITEM_UNAVAILABLE,
+        HttpStatus.CONFLICT,
+        'Some products are not available for order',
+        unavailable,
+      );
+    }
+  }
+
+  private calculateTotal(lines: NewOrderLine[]): string {
+    const total: bigint = lines.reduce((sum, line) => sum + toMinorUnits(line.unitPrice) * BigInt(line.quantity), 0n);
+    return fromMinorUnits(total);
   }
 
   private async getRecordOrThrow(id: string): Promise<OrderRecord> {

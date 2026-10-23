@@ -23,3 +23,24 @@ export type CategoryNode = Omit<CategoryView, 'cover'>;
 export type CategoryDetailView = CategoryView & {
   images: MediaImageView[];
 };
+
+/** A published category in the storefront tree; `productCount` includes published products of every subcategory. */
+export type PublicCategoryNode = {
+  id: string;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  productCount: number;
+  children: PublicCategoryNode[];
+};
+
+/** One step of the path from the root to a category. */
+export type CategoryBreadcrumb = Pick<CategoryRecord, 'id' | 'slug' | 'name'>;
+
+/** A published category with its subtree and the path from the root. */
+export type PublicCategoryDetail = PublicCategoryNode & {
+  description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  breadcrumbs: CategoryBreadcrumb[];
+};

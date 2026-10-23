@@ -7,6 +7,8 @@ import { MIN_PHONE_SEARCH_DIGITS } from './constants/orders.constants.js';
 import { orderRequest } from '../../database/schema/order-request.js';
 import { orderRequestItem } from '../../database/schema/order-request-item.js';
 import type {
+  NewOrderLine,
+  NewOrderValues,
   OrderItemRecord,
   OrderListFilters,
   OrderListRowsResult,
@@ -74,5 +76,17 @@ export class OrdersRepository {
   async updateStatus({ id, status }: { id: string; status: OrderStatus }): Promise<OrderRecord> {
     const [record] = await this.db.update(orderRequest).set({ status }).where(eq(orderRequest.id, id)).returning();
     return record;
+  }
+
+  /** Writes the order and its lines in one transaction and returns the generated number. */
+  async createWithLines({ values, lines }: { values: NewOrderValues; lines: NewOrderLine[] }): Promise<string> {
+    return this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(orderRequest)
+        .values(values)
+        .returning({ id: orderRequest.id, number: orderRequest.number });
+      await tx.insert(orderRequestItem).values(lines.map((line) => ({ ...line, orderRequestId: created.id })));
+      return created.number;
+    });
   }
 }
