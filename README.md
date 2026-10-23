@@ -44,7 +44,25 @@ Swagger: <http://localhost:3000/api/docs>.
 
 Общие правила: slug строится из названия (кириллица транслитерируется) или задаётся явно, повтор даёт `409 SLUG_TAKEN`, смена slug сохраняет старый в `slug_redirect`. Цены передаются строками (`"1299.00"`). Ошибки приходят как `{ code, message, details }`.
 
-Фото обрабатывает модуль `media`: jpeg, png или webp до 10 МБ превращаются в webp до 1600 px плюс превью 480 px. Первая картинка галереи считается обложкой. Публичных эндпоинтов пока нет, они появятся на этапе 5.
+Фото обрабатывает модуль `media`: jpeg, png или webp до 10 МБ превращаются в webp до 1600 px плюс превью 480 px. Первая картинка галереи считается обложкой. 
+## Публичное API
+
+Без авторизации, под `/api`:
+
+| Маршрут | Назначение |
+| --- | --- |
+| `GET categories`, `GET categories/:id` | дерево категорий и карточка категории |
+| `GET collections`, `GET collections/:id` | коллекции |
+| `GET products` | каталог: фильтры, сортировка, `page`, `pageSize` (максимум 48) |
+| `GET products/facets` | значения фильтров для текущей выборки |
+| `GET products/:id` | карточка товара |
+| `GET articles`, `GET articles/:id` | статьи (`pageSize` максимум 48) |
+| `POST orders` | заявка с витрины (лимит попыток) |
+| `GET seo/urls` | slug и `updatedAt` опубликованных сущностей для sitemap |
+| `GET seo/resolve` | новый адрес переименованного slug (для 301) |
+| `GET health` | состояние API, БД и хранилища |
+
+Видимы только опубликованные сущности; товар виден, если вся цепочка его категорий опубликована.
 
 ## Запуск без Docker
 
@@ -63,11 +81,24 @@ npm run start:dev
 
 `src/modules/<модуль>`: в корне `module`, `controller`, `service`, `repository`, остальное по папкам (`dto/`, `types/`, `constants/`, `lib/`, `admin/`). Подробные правила в `CLAUDE.md`.
 
-Модули: `admin-auth`, `categories`, `collections`, `products`, `articles`, `orders`, `media` (все изображения и галереи), `slug-redirects`, `health`.
+Модули: `admin-auth`, `categories`, `collections`, `products`, `articles`, `orders`, `media` (все изображения и галереи), `slug-redirects`, `analytics`, `seo`, `health`.
 
 ## Переменные окружения
 
 Описаны в `.env.example`. Приложение проверяет их при старте и падает с понятным сообщением, если что-то не задано или неверно (значения в ошибке не выводятся).
+
+| Переменная | Назначение |
+| --- | --- |
+| `PORT`, `NODE_ENV` | порт и режим |
+| `DATABASE_URL` | строка подключения PostgreSQL |
+| `CORS_ORIGIN` | origin витрины, можно списком через запятую |
+| `UPLOADS_DIR`, `PUBLIC_MEDIA_URL` | папка загрузок и публичный URL `/media` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` / `ADMIN_PASSWORD_HASH` | вход в админку |
+| `JWT_SECRET` | подпись cookie админки (в production заготовка отклоняется) |
+| `TRUST_PROXY`, `COOKIE_SECURE` | за reverse proxy: число прокси и secure-cookie (в production `true`) |
+| `SWAGGER_ENABLED` | Swagger на `/api/docs`; по умолчанию включён вне production и выключен в production |
+
+В API включены helmet, gzip-сжатие и лог каждого запроса (метод, URL, статус, время). Ошибки всегда приходят как `{ code, message, details }`.
 
 ## Скрипты
 
@@ -87,6 +118,20 @@ npm run start:dev
 
 Husky запускает `npm run pre-commit` (`scripts/pre-commit.mjs`) перед каждым коммитом. Хуки ставятся при `npm install` (скрипт `prepare`).
 
+## Ветки
+
+`feature/*` → PR в `develop` → релиз: merge `develop` → `main` и тег `v1.0.0`. Коммиты: Conventional Commits. Прямых коммитов в `develop` и `main` нет.
+
+## Как добавить товар
+
+Seed-данных нет, каталог наполняется через админку (витрина: `/admin`) или админ-API:
+
+1. Войдите: `POST /api/admin/auth/login` (email и пароль из `.env`).
+2. Убедитесь, что есть опубликованная категория (`POST /api/admin/categories`) и, при необходимости, коллекция.
+3. `POST /api/admin/products`: название, `categoryId`, `sku` (уникальный), цена строкой (`"1299.00"`), `isPublished`. Slug строится из названия.
+4. Загрузите фото: `POST /api/admin/products/:id/images` (jpeg, png, webp до 10 МБ). Первое фото становится обложкой.
+5. Опубликуйте товар. Он появится в каталоге и в `sitemap.xml` витрины сразу, если опубликована вся цепочка его категорий.
+
 ## Правила
 
-Соглашения по коду: `CLAUDE.md`. Коммиты: Conventional Commits. Основная ветка разработки: `develop`.
+Соглашения по коду: `CLAUDE.md`.

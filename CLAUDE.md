@@ -87,6 +87,8 @@ src/
     categories/
     collections/
     health/
+    analytics/
+    seo/
     media/
     orders/
     products/
@@ -107,7 +109,7 @@ The module **root holds at most four files**: `feature.module.ts`, `feature.cont
 | File or folder | Content |
 | --- | --- |
 | `feature.module.ts` | Nest wiring |
-| `feature.controller.ts` | the main HTTP controller of the module. While there are no public endpoints it serves `/api/admin/*` (behind the admin guard). When public endpoints arrive it becomes the public controller and the admin one moves to `admin/` |
+| `feature.controller.ts` | the main HTTP controller of the module: the public controller (`/api/*`); admin controllers live in `admin/` (`/api/admin/*`, behind the admin guard) |
 | `feature.service.ts` | business rules of the core entity |
 | `feature.repository.ts` | Drizzle queries only; present only when the module owns table(s) |
 | `admin/` | additional admin controllers (`admin-*.controller.ts`, `/api/admin/*`, behind the admin guard) |

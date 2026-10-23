@@ -99,4 +99,10 @@ export class EnvironmentVariables {
   @Transform(parseBoolean)
   @IsBoolean()
   COOKIE_SECURE: boolean = false;
+
+  /** Serves Swagger at `/api/docs`. Defaults to on outside production and off in production. */
+  @IsOptional()
+  @Transform(({ value }) => parseBoolean({ value: emptyToUndefined({ value }) }))
+  @IsBoolean()
+  SWAGGER_ENABLED?: boolean;
 }
