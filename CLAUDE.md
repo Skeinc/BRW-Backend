@@ -1,6 +1,6 @@
 # BRW API
 
-Coding rules for Claude Code in this repo. Stack and plan: `../docs/BRW-dev-plan.md`.
+Coding rules for Claude Code in this repo. Project docs: `../docs/README.md`.
 
 # Tests
 

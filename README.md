@@ -2,7 +2,7 @@
 
 REST API интернет-магазина мебели BRW (Black Red White). Стек: NestJS 12 + TypeScript (ESM) + Drizzle ORM + PostgreSQL + фото на локальном диске.
 
-Документация проекта: `../docs/BRW-dev-plan.md`. Фронтенд: `../BRW-Frontend`.
+Документация проекта: `../docs/README.md`. Фронтенд: `../BRW-Frontend`.
 
 ## Запуск через Docker Compose
 
