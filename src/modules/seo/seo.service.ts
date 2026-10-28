@@ -10,15 +10,16 @@ import type { ResolvedSlug, SeoUrl, SeoUrls } from './types/seo.types.js';
 export class SeoService {
   constructor(private readonly seoRepository: SeoRepository) {}
 
-  /** Slug and `updatedAt` of every published category, collection, product and article. */
+  /** Slug and `updatedAt` of every published category, collection, product, article and news item. */
   async listUrls(): Promise<SeoUrls> {
-    const [categories, collections, products, articles]: SeoUrl[][] = await Promise.all([
+    const [categories, collections, products, articles, news]: SeoUrl[][] = await Promise.all([
       this.seoRepository.findPublishedUrls('category'),
       this.seoRepository.findPublishedUrls('collection'),
       this.seoRepository.findPublishedUrls('product'),
       this.seoRepository.findPublishedUrls('article'),
+      this.seoRepository.findPublishedUrls('news'),
     ]);
-    return { categories, collections, products, articles };
+    return { categories, collections, products, articles, news };
   }
 
   /** The new location of an old slug; fails with 404 REDIRECT_NOT_FOUND when the slug was never renamed. */

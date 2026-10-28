@@ -14,6 +14,7 @@ export type SeoUrls = {
   collections: SeoUrl[];
   products: SeoUrl[];
   articles: SeoUrl[];
+  news: SeoUrl[];
 };
 
 /** Current location of an entity whose old slug was requested. */

@@ -90,6 +90,7 @@ src/
     analytics/
     seo/
     media/
+    news/
     orders/
     products/
     slug-redirects/
@@ -154,9 +155,9 @@ No module has a subdomain yet; split one out only when a part of a module grows 
 
 ### Module boundaries
 
-- `categories` owns `category`, `products` owns `product`, `articles` owns `article`. `products` may depend on `categories`; `categories` does not import `products` (counts come through a read-only repository method or an injected port).
-- `media` owns the `media_image` table and is the only module that converts, stores, lists and removes images. Products, categories, collections and articles do not store image columns: each owns a gallery addressed by `(entityType, entityId)`, the cover is the image with the lowest sort order. An entity module calls `MediaService` (`listImages`, `getCovers` for lists, `removeAllImages` when the entity is deleted). The gallery endpoints `/api/admin/{products|categories|collections|articles}/:id/images` are built by `createEntityImagesController` in `media/lib/`; to give a new entity a gallery add its type to the `media_entity_type` enum, to `OWNER_TABLES` in `media.repository.ts` and a controller file in `media/admin/`.
-- `slug-redirects` records renamed slugs for categories, collections, products and articles.
+- `categories` owns `category`, `products` owns `product`, `articles` owns `article`, `news` owns `news` (a separate module on purpose: news may diverge from articles). `products` may depend on `categories`; `categories` does not import `products` (counts come through a read-only repository method or an injected port).
+- `media` owns the `media_image` table and is the only module that converts, stores, lists and removes images. Products, categories, collections, articles and news do not store image columns: each owns a gallery addressed by `(entityType, entityId)`, the cover is the image with the lowest sort order. An entity module calls `MediaService` (`listImages`, `getCovers` for lists, `removeAllImages` when the entity is deleted). The gallery endpoints `/api/admin/{products|categories|collections|articles|news}/:id/images` are built by `createEntityImagesController` in `media/lib/`; to give a new entity a gallery add its type to the `media_entity_type` enum, to `OWNER_TABLES` in `media.repository.ts` and a controller file in `media/admin/`.
+- `slug-redirects` records renamed slugs for categories, collections, products, articles and news.
 - Cross-module use of `common/storage` is allowed.
 
 Do not add `domain/`, `application/`, or `infrastructure/` layers inside a module.

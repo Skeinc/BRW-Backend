@@ -18,6 +18,7 @@ export const ENTITY_FOLDERS: Readonly<Record<MediaEntityType, string>> = {
   category: 'categories',
   collection: 'collections',
   article: 'articles',
+  news: 'news',
 };
 
 /** Error returned when the owner of a gallery does not exist. */
@@ -26,4 +27,5 @@ export const OWNER_NOT_FOUND_CODES: Readonly<Record<MediaEntityType, ErrorCode>>
   category: ErrorCode.CATEGORY_NOT_FOUND,
   collection: ErrorCode.COLLECTION_NOT_FOUND,
   article: ErrorCode.ARTICLE_NOT_FOUND,
+  news: ErrorCode.NEWS_NOT_FOUND,
 };

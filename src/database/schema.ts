@@ -4,6 +4,7 @@ import { collection } from './schema/collection.js';
 import { deliveryMethodEnum } from './schema/delivery-method.enum.js';
 import { mediaEntityTypeEnum } from './schema/media-entity-type.enum.js';
 import { mediaImage } from './schema/media-image.js';
+import { news } from './schema/news.js';
 import { orderRequest } from './schema/order-request.js';
 import { orderRequestItem } from './schema/order-request-item.js';
 import { orderRequestNumberSequence } from './schema/order-request-number.sequence.js';
@@ -24,6 +25,7 @@ export const schema = {
   deliveryMethodEnum,
   mediaEntityTypeEnum,
   mediaImage,
+  news,
   orderRequest,
   orderRequestItem,
   orderRequestNumberSequence,

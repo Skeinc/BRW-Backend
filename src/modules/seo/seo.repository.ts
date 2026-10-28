@@ -4,13 +4,14 @@ import { buildVisibleCategoryIds } from '../categories/lib/build-visible-categor
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { article } from '../../database/schema/article.js';
+import { news } from '../../database/schema/news.js';
 import { category } from '../../database/schema/category.js';
 import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
 import { slugRedirect } from '../../database/schema/slug-redirect.js';
 import type { ResolvedSlug, SeoEntityType, SeoUrl } from './types/seo.types.js';
 
-const ENTITY_TABLES = { category, collection, product, article } as const;
+const ENTITY_TABLES = { category, collection, product, article, news } as const;
 
 /** Read-only Drizzle queries for the sitemap and old-slug lookups. */
 @Injectable()
@@ -45,12 +46,13 @@ export class SeoRepository {
     return row === undefined ? undefined : { type, ...row };
   }
 
-  /** Categories need a published chain of parents and products a visible category; collections and articles need nothing more. */
+  /** Categories need a published chain of parents and products a visible category; collections, articles and news need nothing more. */
   private buildVisibleCondition(type: SeoEntityType): SQL | undefined {
     const conditions: Record<SeoEntityType, SQL | undefined> = {
       category: sql`${category.id} IN ${buildVisibleCategoryIds()}`,
       collection: undefined,
       article: undefined,
+      news: undefined,
       product: sql`${product.categoryId} IN ${buildVisibleCategoryIds()}`,
     };
     return conditions[type];

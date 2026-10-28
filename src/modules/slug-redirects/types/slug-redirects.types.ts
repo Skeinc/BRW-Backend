@@ -1,4 +1,4 @@
-export type SlugRedirectEntity = 'category' | 'collection' | 'product' | 'article';
+export type SlugRedirectEntity = 'category' | 'collection' | 'product' | 'article' | 'news';
 
 export type RecordSlugChangeInput = {
   entity: SlugRedirectEntity;

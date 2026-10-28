@@ -13,6 +13,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CollectionsModule } from './modules/collections/collections.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MediaModule } from './modules/media/media.module.js';
+import { NewsModule } from './modules/news/news.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { SeoModule } from './modules/seo/seo.module.js';
@@ -37,6 +38,7 @@ import { SeoModule } from './modules/seo/seo.module.js';
     OrdersModule,
     AnalyticsModule,
     ArticlesModule,
+    NewsModule,
     SeoModule,
   ],
   providers: [

@@ -1,0 +1,3 @@
+export const NEWS_SLUG_MAX_LENGTH = 160;
+export const PUBLIC_NEWS_DEFAULT_PAGE_SIZE = 12;
+export const PUBLIC_NEWS_MAX_PAGE_SIZE = 48;
