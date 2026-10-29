@@ -6,4 +6,7 @@ export const mediaEntityTypeEnum = pgEnum('media_entity_type', [
   'collection',
   'article',
   'news',
+  'slide',
+  'room',
+  'solution',
 ]);

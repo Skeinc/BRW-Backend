@@ -14,6 +14,8 @@ import { CollectionsModule } from './modules/collections/collections.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { NewsModule } from './modules/news/news.module.js';
+import { RoomsModule } from './modules/rooms/rooms.module.js';
+import { SlidesModule } from './modules/slides/slides.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { SeoModule } from './modules/seo/seo.module.js';
@@ -39,6 +41,8 @@ import { SeoModule } from './modules/seo/seo.module.js';
     AnalyticsModule,
     ArticlesModule,
     NewsModule,
+    RoomsModule,
+    SlidesModule,
     SeoModule,
   ],
   providers: [

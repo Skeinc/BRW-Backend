@@ -4,6 +4,9 @@ import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { article } from '../../database/schema/article.js';
 import { news } from '../../database/schema/news.js';
+import { room } from '../../database/schema/room.js';
+import { slide } from '../../database/schema/slide.js';
+import { solution } from '../../database/schema/solution.js';
 import { category } from '../../database/schema/category.js';
 import { collection } from '../../database/schema/collection.js';
 import { mediaImage } from '../../database/schema/media-image.js';
@@ -16,7 +19,7 @@ import type {
   ReorderImagesInput,
 } from './types/media.types.js';
 
-const OWNER_TABLES = { product, category, collection, article, news } as const;
+const OWNER_TABLES = { product, category, collection, article, news, slide, room, solution } as const;
 
 /** Drizzle queries for the `media_image` table. Every list query is served by the `(entity_type, entity_id, sort_order)` index. */
 @Injectable()

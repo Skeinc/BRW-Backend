@@ -50,6 +50,20 @@
       "when": 1793216096195,
       "tag": "0006_news",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793276243112,
+      "tag": "0007_slides",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793277866308,
+      "tag": "0008_rooms_solutions",
+      "breakpoints": true
     }
   ]
 }

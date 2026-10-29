@@ -11,6 +11,10 @@ import { orderRequestNumberSequence } from './schema/order-request-number.sequen
 import { orderStatusEnum } from './schema/order-status.enum.js';
 import { paymentMethodEnum } from './schema/payment-method.enum.js';
 import { product } from './schema/product.js';
+import { room } from './schema/room.js';
+import { slide } from './schema/slide.js';
+import { solution } from './schema/solution.js';
+import { solutionProduct } from './schema/solution-product.js';
 import { slugRedirect } from './schema/slug-redirect.js';
 import { slugRedirectEntityEnum } from './schema/slug-redirect-entity.enum.js';
 import { stockStatusEnum } from './schema/stock-status.enum.js';
@@ -32,6 +36,10 @@ export const schema = {
   orderStatusEnum,
   paymentMethodEnum,
   product,
+  room,
+  slide,
+  solution,
+  solutionProduct,
   slugRedirect,
   slugRedirectEntityEnum,
   stockStatusEnum,

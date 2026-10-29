@@ -29,7 +29,7 @@ export class ArticlesRepository {
       .select(columns)
       .from(article)
       .where(where)
-      .orderBy(desc(article.createdAt), desc(article.id))
+      .orderBy(sql`${article.publishedAt} DESC NULLS FIRST`, desc(article.createdAt), desc(article.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
     const [totalRow] = await this.db.select({ total: count() }).from(article).where(where);

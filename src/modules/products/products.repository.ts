@@ -200,6 +200,14 @@ export class ProductsRepository {
     return record;
   }
 
+  /** The highest number among generated SKUs (`BRW-000123`), or 0 when there are none. */
+  async findMaxGeneratedSkuNumber(): Promise<number> {
+    const [row] = await this.db
+      .select({ value: sql<number>`coalesce(max(substring(${product.sku} from '^BRW-(\\d+)$')::int), 0)` })
+      .from(product);
+    return row?.value ?? 0;
+  }
+
   /** Inserts a row and returns it. */
   async insert(values: NewProductValues): Promise<ProductRecord> {
     const [record] = await this.db.insert(product).values(values).returning();

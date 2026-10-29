@@ -30,7 +30,7 @@ export class NewsRepository {
       .select(columns)
       .from(news)
       .where(where)
-      .orderBy(desc(news.createdAt), desc(news.id))
+      .orderBy(sql`${news.publishedAt} DESC NULLS FIRST`, desc(news.createdAt), desc(news.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
     const [totalRow] = await this.db.select({ total: count() }).from(news).where(where);

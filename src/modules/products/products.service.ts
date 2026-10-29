@@ -18,7 +18,7 @@ import type { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 import type { ListPublicProductsQueryDto } from './dto/list-public-products-query.dto.js';
 import type { PublicProductFiltersDto } from './dto/public-product-filters.dto.js';
 import type { UpdateProductDto } from './dto/update-product.dto.js';
-import { PRODUCT_SLUG_MAX_LENGTH } from './constants/products.constants.js';
+import { GENERATED_SKU_DIGITS, GENERATED_SKU_PREFIX, PRODUCT_SLUG_MAX_LENGTH } from './constants/products.constants.js';
 import { ProductsRepository } from './products.repository.js';
 import type {
   ProductFacets,
@@ -164,8 +164,9 @@ export class ProductsService {
     });
     await this.assertSlugAvailable({ slug });
     await this.assertSkuAvailable({ sku: dto.sku });
+    const sku: string = dto.sku || (await this.generateSku());
     try {
-      const record: ProductRecord = await this.productsRepository.insert({ ...fields, sku: dto.sku || null, slug });
+      const record: ProductRecord = await this.productsRepository.insert({ ...fields, sku, slug });
       await this.slugRedirectsService.release({ entity: 'product', slug });
       return await this.toView(record);
     } catch (err) {
@@ -242,6 +243,12 @@ export class ProductsService {
     if (owner !== undefined && owner.id !== excludeId) {
       throw new SlugTakenException(slug);
     }
+  }
+
+  /** The next article number in the single `BRW-000123` format. */
+  private async generateSku(): Promise<string> {
+    const next: number = (await this.productsRepository.findMaxGeneratedSkuNumber()) + 1;
+    return `${GENERATED_SKU_PREFIX}${String(next).padStart(GENERATED_SKU_DIGITS, '0')}`;
   }
 
   private async assertSkuAvailable({ sku, excludeId }: { sku?: string | null; excludeId?: string }): Promise<void> {

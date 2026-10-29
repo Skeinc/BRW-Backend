@@ -19,6 +19,9 @@ export const ENTITY_FOLDERS: Readonly<Record<MediaEntityType, string>> = {
   collection: 'collections',
   article: 'articles',
   news: 'news',
+  slide: 'slides',
+  room: 'rooms',
+  solution: 'solutions',
 };
 
 /** Error returned when the owner of a gallery does not exist. */
@@ -28,4 +31,7 @@ export const OWNER_NOT_FOUND_CODES: Readonly<Record<MediaEntityType, ErrorCode>>
   collection: ErrorCode.COLLECTION_NOT_FOUND,
   article: ErrorCode.ARTICLE_NOT_FOUND,
   news: ErrorCode.NEWS_NOT_FOUND,
+  slide: ErrorCode.SLIDE_NOT_FOUND,
+  room: ErrorCode.ROOM_NOT_FOUND,
+  solution: ErrorCode.SOLUTION_NOT_FOUND,
 };

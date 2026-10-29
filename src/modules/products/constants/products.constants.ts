@@ -1,4 +1,7 @@
 export const PRODUCT_SLUG_MAX_LENGTH = 160;
+/** Generated SKUs look like `BRW-000123`; the number is the highest existing one plus one. */
+export const GENERATED_SKU_PREFIX = 'BRW-';
+export const GENERATED_SKU_DIGITS = 6;
 export const PRICE_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
 
 export const PRODUCT_ISSUES = ['out_of_stock', 'no_photo', 'no_collection', 'not_ordered'] as const;
