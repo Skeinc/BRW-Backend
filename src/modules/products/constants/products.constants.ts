@@ -16,3 +16,6 @@ export const PUBLIC_MAX_PAGE_SIZE = 48;
 export const MAX_FILTER_VALUES = 20;
 /** The popularity of a product is the number of order lines of non-cancelled orders in this many days. */
 export const POPULAR_DAYS = 90;
+/** Sizes of the storefront size filters, in centimetres; products store millimetres. */
+export const MAX_DIMENSION_CM = 1000;
+export const MM_IN_CM = 10;

@@ -48,6 +48,15 @@ export type PublicRoomDetail = PublicRoomItem &
 /** A collection inside a room: its text and the ready-made solutions of that room. */
 export type PublicRoomCollectionDetail = {
   room: Pick<RoomRecord, 'id' | 'name'>;
-  collection: Pick<CollectionRecord, 'id' | 'name' | 'description' | 'seoTitle' | 'seoDescription'>;
+  collection: Pick<CollectionRecord, 'id' | 'slug' | 'name' | 'description' | 'seoTitle' | 'seoDescription'>;
   solutions: PublicSolution[];
+};
+
+/** A solution of a collection in some room, as a thumbnail that links to the collection page of that room. */
+export type PublicCollectionSolution = {
+  id: string;
+  name: string;
+  roomId: string;
+  roomName: string;
+  image: MediaCoverImage | null;
 };

@@ -25,10 +25,15 @@ export class AdminRoomsService {
     private readonly mediaService: MediaService,
   ) {}
 
-  /** One page of rooms by sort order with covers and solution counts. */
+  /** One page of rooms by sort order with covers and solution counts, after the search and the publication filter. */
   async list(query: ListRoomsQueryDto): Promise<PaginatedResult<RoomView>> {
-    const { page, pageSize } = query;
-    const records: RoomRecord[] = await this.roomsRepository.findAll();
+    const { page, pageSize, q, isPublished } = query;
+    const needle: string | undefined = q?.toLocaleLowerCase();
+    const records: RoomRecord[] = (await this.roomsRepository.findAll()).filter(
+      (record) =>
+        (needle === undefined || record.name.toLocaleLowerCase().includes(needle)) &&
+        (isPublished === undefined || record.isPublished === isPublished),
+    );
     const pageRecords: RoomRecord[] = records.slice((page - 1) * pageSize, page * pageSize);
     const covers = await this.mediaService.getCovers({
       entityType: 'room',

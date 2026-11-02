@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { DimensionFilter } from '../decorators/dimension-filter.decorator.js';
 import { emptyToUndefined } from '../../../common/transforms/empty-to-undefined.js';
 import { toBoolean } from '../../../common/transforms/to-boolean.js';
 import { toStringArray } from '../../../common/transforms/to-string-array.js';
@@ -80,4 +81,28 @@ export class PublicProductFiltersDto {
   @Transform(toBoolean)
   @IsBoolean()
   inStock?: boolean;
+
+  @DimensionFilter('Width from, cm')
+  widthMin?: number;
+
+  @DimensionFilter('Width to, cm')
+  widthMax?: number;
+
+  @DimensionFilter('Height from, cm')
+  heightMin?: number;
+
+  @DimensionFilter('Height to, cm')
+  heightMax?: number;
+
+  @DimensionFilter('Depth from, cm')
+  depthMin?: number;
+
+  @DimensionFilter('Depth to, cm')
+  depthMax?: number;
+
+  @DimensionFilter('Length from, cm')
+  lengthMin?: number;
+
+  @DimensionFilter('Length to, cm')
+  lengthMax?: number;
 }

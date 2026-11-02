@@ -1,7 +1,12 @@
 import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoomsService } from './rooms.service.js';
-import type { PublicRoomCollectionDetail, PublicRoomDetail, PublicRoomItem } from './types/rooms.types.js';
+import type {
+  PublicCollectionSolution,
+  PublicRoomCollectionDetail,
+  PublicRoomDetail,
+  PublicRoomItem,
+} from './types/rooms.types.js';
 
 /** Public HTTP endpoints of rooms under `/api/rooms`. */
 @ApiTags('catalog')
@@ -14,6 +19,15 @@ export class RoomsController {
   @ApiOperation({ summary: 'Published rooms with collectionCount and imageUrl' })
   list(): Promise<PublicRoomItem[]> {
     return this.roomsService.listPublic();
+  }
+
+  /** Solutions of one collection in all rooms: the thumbnails under the product. */
+  @Get('collection/:collectionId/solutions')
+  @ApiOperation({ summary: 'Published solutions of a collection across rooms, with the room of each' })
+  listCollectionSolutions(
+    @Param('collectionId', ParseUUIDPipe) collectionId: string,
+  ): Promise<PublicCollectionSolution[]> {
+    return this.roomsService.listCollectionSolutions(collectionId);
   }
 
   /** One published room with its collection cards. */

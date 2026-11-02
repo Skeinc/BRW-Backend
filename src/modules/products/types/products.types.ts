@@ -53,6 +53,12 @@ export type ProductListRowsResult = {
 
 export type PublicProductSort = 'price_asc' | 'price_desc' | 'new' | 'popular';
 
+/** Sizes that the storefront can filter by. */
+export type DimensionName = 'width' | 'height' | 'depth' | 'length';
+
+/** Both ends of the range of every size, in centimetres. */
+export type DimensionRangeFilters = { [K in DimensionName as `${K}Min` | `${K}Max`]?: number };
+
 /** Storefront filters. `category` and `collection` are slugs; a category includes its subcategories. */
 export type PublicProductFilters = {
   category?: string;
@@ -65,10 +71,11 @@ export type PublicProductFilters = {
   colorFacade?: string[];
   inStock?: boolean;
   hit?: boolean;
-};
+} & DimensionRangeFilters;
 
 /** A filter that a facet leaves out when it counts its own values. */
-export type PublicProductFilterKey = 'category' | 'collection' | 'price' | 'material' | 'colorBody' | 'colorFacade';
+export type PublicProductFilterKey =
+  'category' | 'collection' | 'price' | 'material' | 'colorBody' | 'colorFacade' | DimensionName;
 
 export type NamedRef = {
   id: string;
@@ -87,6 +94,10 @@ export type PublicProductListItem = {
   discountPercent: number | null;
   isHit: boolean;
   stockStatus: ProductRecord['stockStatus'];
+  widthMm: number | null;
+  heightMm: number | null;
+  depthMm: number | null;
+  lengthMm: number | null;
   coverImage: MediaCoverImage | null;
   category: NamedRef;
   collection: NamedRef | null;
@@ -110,6 +121,8 @@ export type ProductFacets = {
   materials: FacetValue[];
   colorsBody: FacetValue[];
   colorsFacade: FacetValue[];
+  /** Smallest and largest size of the current selection, in centimetres. */
+  dimensions: Record<DimensionName, { min: number | null; max: number | null }>;
 };
 
 /** A published product with its photos, category path and collection. */

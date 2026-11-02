@@ -3,9 +3,10 @@ import { AppException } from '../../common/errors/app.exception.js';
 import { ErrorCode } from '../../common/errors/error-code.js';
 import { MediaService } from '../media/media.service.js';
 import type { MediaCoverImage } from '../media/types/media.types.js';
-import { RoomsRepository, type SolutionElementRow } from './rooms.repository.js';
+import { RoomsRepository, type CollectionSolutionRow, type SolutionElementRow } from './rooms.repository.js';
 import type {
   CollectionRecord,
+  PublicCollectionSolution,
   PublicRoomCollection,
   PublicRoomCollectionDetail,
   PublicRoomDetail,
@@ -34,13 +35,14 @@ export class RoomsService {
     return rooms.map((record) => this.toRoomItem({ record, refs, covers }));
   }
 
-  /** One published room with its collection cards; fails with 404 ROOM_NOT_FOUND. */
+  /** One published room with its collection cards, in the order of the first solution of each collection; fails with 404 ROOM_NOT_FOUND. */
   async getPublic(id: string): Promise<PublicRoomDetail> {
     const record: RoomRecord = await this.getPublishedRoomOrThrow(id);
     const refs: SolutionRef[] = await this.roomsRepository.findPublishedSolutionRefs(id);
-    const collections: CollectionRecord[] = await this.roomsRepository.findPublishedCollections([
-      ...new Set(refs.map(({ collectionId }) => collectionId)),
-    ]);
+    const orderedIds: string[] = [...new Set(refs.map(({ collectionId }) => collectionId))];
+    const found: CollectionRecord[] = await this.roomsRepository.findPublishedCollections(orderedIds);
+    const foundById = new Map<string, CollectionRecord>(found.map((item) => [item.id, item]));
+    const collections: CollectionRecord[] = orderedIds.flatMap((collectionId) => foundById.get(collectionId) ?? []);
     const [roomCovers, solutionCovers] = await Promise.all([
       this.mediaService.getCovers({ entityType: 'room', entityIds: [id] }),
       this.mediaService.getCovers({ entityType: 'solution', entityIds: refs.map((ref) => ref.id) }),
@@ -82,6 +84,7 @@ export class RoomsService {
       room: { id: roomRecord.id, name: roomRecord.name },
       collection: {
         id: collectionRecord.id,
+        slug: collectionRecord.slug,
         name: collectionRecord.name,
         description: collectionRecord.description,
         seoTitle: collectionRecord.seoTitle,
@@ -89,6 +92,16 @@ export class RoomsService {
       },
       solutions,
     };
+  }
+
+  /** Published solutions of a collection in every room, for the product page; empty when there are none. */
+  async listCollectionSolutions(collectionId: string): Promise<PublicCollectionSolution[]> {
+    const rows: CollectionSolutionRow[] = await this.roomsRepository.findPublishedSolutionsOfCollection(collectionId);
+    const covers: Map<string, MediaCoverImage> = await this.mediaService.getCoverImages({
+      entityType: 'solution',
+      entityIds: rows.map(({ id }) => id),
+    });
+    return rows.map((row) => ({ ...row, image: covers.get(row.id) ?? null }));
   }
 
   private async toSolutions(records: SolutionRecord[]): Promise<PublicSolution[]> {

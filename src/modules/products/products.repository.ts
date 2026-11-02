@@ -23,11 +23,14 @@ import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
 import { toCollectionRef } from './lib/to-collection-ref.js';
 import { buildVisibleCategoryIds } from '../categories/lib/build-visible-category-ids.js';
+import { DIMENSION_COLUMNS } from './lib/build-dimension-conditions.js';
 import { buildPublicProductOrder } from './lib/build-public-product-order.js';
 import { buildPublicProductWhere } from './lib/build-public-product-where.js';
 import { buildNoPhotoCondition } from './lib/build-no-photo-condition.js';
 import { buildNotOrderedCondition } from './lib/build-not-ordered-condition.js';
+import { MM_IN_CM } from './constants/products.constants.js';
 import type {
+  DimensionName,
   FacetValue,
   NewProductValues,
   ProductFacets,
@@ -103,6 +106,10 @@ export class ProductsRepository {
           oldPrice: product.oldPrice,
           stockStatus: product.stockStatus,
           isHit: product.isHit,
+          widthMm: product.widthMm,
+          heightMm: product.heightMm,
+          depthMm: product.depthMm,
+          lengthMm: product.lengthMm,
           category: { id: category.id, slug: category.slug, name: category.name },
           collectionId: collection.id,
           collectionSlug: collection.slug,
@@ -128,14 +135,15 @@ export class ProductsRepository {
 
   /** Values available for each filter, every one counted without its own filter. */
   async findFacets(filters: PublicProductFilters): Promise<ProductFacets> {
-    const [price, collections, materials, colorsBody, colorsFacade] = await Promise.all([
+    const [price, collections, materials, colorsBody, colorsFacade, dimensions] = await Promise.all([
       this.findPriceRange(filters),
       this.findCollectionFacet(filters),
       this.countByColumn({ filters, column: product.material, omit: 'material' }),
       this.countByColumn({ filters, column: product.colorBody, omit: 'colorBody' }),
       this.countByColumn({ filters, column: product.colorFacade, omit: 'colorFacade' }),
+      this.findDimensionRanges(filters),
     ]);
-    return { price, collections, materials, colorsBody, colorsFacade };
+    return { price, collections, materials, colorsBody, colorsFacade, dimensions };
   }
 
   /** A published product with its category and collection refs, or undefined. */
@@ -231,6 +239,24 @@ export class ProductsRepository {
       .from(product)
       .where(buildPublicProductWhere({ filters, omit: 'price' }));
     return { min: row.min, max: row.max };
+  }
+
+  private async findDimensionRanges(filters: PublicProductFilters): Promise<ProductFacets['dimensions']> {
+    const names = Object.keys(DIMENSION_COLUMNS) as DimensionName[];
+    const ranges = await Promise.all(
+      names.map(async (name) => {
+        const column = DIMENSION_COLUMNS[name];
+        const [row] = await this.db
+          .select({ min: min(column), max: max(column) })
+          .from(product)
+          .where(buildPublicProductWhere({ filters, omit: name }));
+        return {
+          min: row.min === null ? null : Math.floor(row.min / MM_IN_CM),
+          max: row.max === null ? null : Math.ceil(row.max / MM_IN_CM),
+        };
+      }),
+    );
+    return { width: ranges[0], height: ranges[1], depth: ranges[2], length: ranges[3] };
   }
 
   private async findCollectionFacet(filters: PublicProductFilters): Promise<ProductFacets['collections']> {

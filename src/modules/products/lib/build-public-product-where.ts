@@ -3,7 +3,8 @@ import { buildContainsPattern } from '../../../common/lib/build-contains-pattern
 import { buildVisibleCategoryIds } from '../../categories/lib/build-visible-category-ids.js';
 import { collection } from '../../../database/schema/collection.js';
 import { product } from '../../../database/schema/product.js';
-import type { PublicProductFilterKey, PublicProductFilters } from '../types/products.types.js';
+import type { DimensionName, PublicProductFilterKey, PublicProductFilters } from '../types/products.types.js';
+import { buildDimensionConditions, DIMENSION_COLUMNS } from './build-dimension-conditions.js';
 import { buildCategorySlugCondition } from './build-category-slug-condition.js';
 
 type BuildPublicProductWhereInput = {
@@ -42,7 +43,12 @@ export function buildPublicProductWhere({ filters, omit }: BuildPublicProductWhe
     colorFacade !== undefined && use('colorFacade') ? inArray(product.colorFacade, colorFacade) : undefined,
     inStock === true ? ne(product.stockStatus, 'out_of_stock') : undefined,
     hit === true ? eq(product.isHit, true) : undefined,
+    ...buildDimensionConditions({ filters, omit: omit === undefined || !isDimension(omit) ? undefined : omit }),
   );
+}
+
+function isDimension(key: PublicProductFilterKey): key is DimensionName {
+  return key in DIMENSION_COLUMNS;
 }
 
 /** Substring match on name or SKU, or a similar word in the name (trigram index), so typos still find products. */

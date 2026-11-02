@@ -18,6 +18,14 @@ export type SolutionElementRow = {
   oldPrice: string | null;
 };
 
+/** Solution of a collection with the name of its room. */
+export type CollectionSolutionRow = {
+  id: string;
+  name: string;
+  roomId: string;
+  roomName: string;
+};
+
 /** Read-only Drizzle queries of the storefront for rooms and their solutions. */
 @Injectable()
 export class RoomsRepository {
@@ -86,6 +94,24 @@ export class RoomsRepository {
       .from(solution)
       .where(and(eq(solution.roomId, roomId), eq(solution.collectionId, collectionId), eq(solution.isPublished, true)))
       .orderBy(asc(solution.sortOrder), asc(solution.name));
+  }
+
+  /** Published solutions of one collection across published rooms: by room order, then solution order. */
+  async findPublishedSolutionsOfCollection(collectionId: string): Promise<CollectionSolutionRow[]> {
+    return this.db
+      .select({ id: solution.id, name: solution.name, roomId: room.id, roomName: room.name })
+      .from(solution)
+      .innerJoin(room, eq(room.id, solution.roomId))
+      .innerJoin(collection, eq(collection.id, solution.collectionId))
+      .where(
+        and(
+          eq(solution.collectionId, collectionId),
+          eq(solution.isPublished, true),
+          eq(room.isPublished, true),
+          eq(collection.isPublished, true),
+        ),
+      )
+      .orderBy(asc(room.sortOrder), asc(room.name), asc(solution.sortOrder), asc(solution.name));
   }
 
   /** Published products that are elements of the given solutions, in element order. */
