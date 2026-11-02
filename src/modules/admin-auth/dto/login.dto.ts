@@ -1,14 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 const MAX_CREDENTIAL_LENGTH = 200;
 
 /** Admin login credentials. */
 export class LoginDto {
-  @ApiProperty({ example: 'admin@brw.local' })
-  @IsEmail()
+  @ApiProperty({ example: 'BRW-COMPANY' })
+  @IsString()
+  @IsNotEmpty()
   @MaxLength(MAX_CREDENTIAL_LENGTH)
-  email: string;
+  login: string;
 
   @ApiProperty({ example: 'your-admin-password' })
   @IsString()

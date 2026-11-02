@@ -16,7 +16,7 @@ const CREDENTIAL_VERSION_LENGTH = 32;
  */
 @Injectable()
 export class AdminAuthService {
-  private readonly adminEmail: string;
+  private readonly adminLogin: string;
   private readonly adminPassword: string | undefined;
   private readonly adminPasswordHash: string | undefined;
   private readonly credentialVersion: string;
@@ -25,7 +25,7 @@ export class AdminAuthService {
     configService: ConfigService<EnvironmentVariables, true>,
     private readonly jwtService: JwtService,
   ) {
-    this.adminEmail = configService.getOrThrow('ADMIN_EMAIL', { infer: true }).trim().toLowerCase();
+    this.adminLogin = configService.getOrThrow('ADMIN_LOGIN', { infer: true }).trim().toLowerCase();
     this.adminPassword = configService.get('ADMIN_PASSWORD', { infer: true });
     this.adminPasswordHash = configService.get('ADMIN_PASSWORD_HASH', { infer: true });
     this.credentialVersion = this.buildCredentialVersion(configService.getOrThrow('JWT_SECRET', { infer: true }));
@@ -34,13 +34,13 @@ export class AdminAuthService {
   /**
    * Checks the credentials and returns a signed token. Fails with 401 UNAUTHORIZED for any mismatch.
    */
-  async login({ email, password }: LoginDto): Promise<string> {
-    const isEmailValid: boolean = this.isSameText(email.trim().toLowerCase(), this.adminEmail);
+  async login({ login, password }: LoginDto): Promise<string> {
+    const isLoginValid: boolean = this.isSameText(login.trim().toLowerCase(), this.adminLogin);
     const isPasswordValid: boolean = await this.isPasswordValid(password);
-    if (!isEmailValid || !isPasswordValid) {
-      throw this.buildUnauthorizedException('Invalid email or password');
+    if (!isLoginValid || !isPasswordValid) {
+      throw this.buildUnauthorizedException('Invalid login or password');
     }
-    const payload: AdminTokenPayload = { sub: this.adminEmail, cv: this.credentialVersion };
+    const payload: AdminTokenPayload = { sub: this.adminLogin, cv: this.credentialVersion };
     return this.jwtService.signAsync(payload);
   }
 
@@ -51,12 +51,12 @@ export class AdminAuthService {
     try {
       const payload: AdminTokenPayload = await this.jwtService.verifyAsync<AdminTokenPayload>(token);
       if (
-        !this.isSameText(payload.sub, this.adminEmail) ||
+        !this.isSameText(payload.sub, this.adminLogin) ||
         !this.isSameText(payload.cv ?? '', this.credentialVersion)
       ) {
         throw this.buildUnauthorizedException('Authentication required');
       }
-      return { email: payload.sub };
+      return { login: payload.sub };
     } catch (err) {
       throw err instanceof AppException ? err : this.buildUnauthorizedException('Authentication required');
     }
@@ -69,9 +69,9 @@ export class AdminAuthService {
     return new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, message);
   }
 
-  /** Keyed hash of the current email and password (or hash), so changing either one invalidates old tokens. */
+  /** Keyed hash of the current login and password (or hash), so changing either one invalidates old tokens. */
   private buildCredentialVersion(secret: string): string {
-    const credential = `${this.adminEmail}\n${this.adminPassword ?? this.adminPasswordHash ?? ''}`;
+    const credential = `${this.adminLogin}\n${this.adminPassword ?? this.adminPasswordHash ?? ''}`;
     return createHmac('sha256', secret).update(credential).digest('hex').slice(0, CREDENTIAL_VERSION_LENGTH);
   }
 

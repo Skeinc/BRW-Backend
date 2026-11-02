@@ -7,7 +7,7 @@ REST API интернет-магазина мебели BRW (Black Red White). �
 ## Запуск через Docker Compose
 
 ```bash
-cp .env.example .env   # задайте ADMIN_EMAIL и ADMIN_PASSWORD
+cp .env.example .env   # задайте ADMIN_LOGIN и ADMIN_PASSWORD
 docker compose up --build
 ```
 
@@ -24,9 +24,9 @@ Swagger: <http://localhost:3000/api/docs>.
 
 ## Админ-API
 
-Вход в админку: `ADMIN_EMAIL` и `ADMIN_PASSWORD` из `.env`, без них compose не стартует. Вместо открытого пароля можно задать bcrypt-хеш в `ADMIN_PASSWORD_HASH` (`npm run admin:hash -- <пароль>`, значение в одинарных кавычках), он используется, только если `ADMIN_PASSWORD` пуст. Админ-API живёт под `/api/admin/*`: войдите через `POST /api/admin/auth/login` в Swagger, дальше cookie подставляется сама.
+Вход в админку: `ADMIN_LOGIN` и `ADMIN_PASSWORD` из `.env`, без них compose не стартует. Вместо открытого пароля можно задать bcrypt-хеш в `ADMIN_PASSWORD_HASH` (`npm run admin:hash -- <пароль>`, значение в одинарных кавычках), он используется, только если `ADMIN_PASSWORD` пуст. Админ-API живёт под `/api/admin/*`: войдите через `POST /api/admin/auth/login` в Swagger, дальше cookie подставляется сама.
 
-`JWT_SECRET` обязателен: сгенерируйте свой (`openssl rand -hex 32`). В production (в Docker) заготовки из репозитория отклоняются, приложение не стартует. Токен привязан к текущим email и паролю: после смены любого из них старые cookie перестают работать. За reverse proxy задайте `TRUST_PROXY` (число прокси, nginx = 1), иначе лимит попыток входа (5 в минуту) общий для всех клиентов.
+`JWT_SECRET` обязателен: сгенерируйте свой (`openssl rand -hex 32`). В production (в Docker) заготовки из репозитория отклоняются, приложение не стартует. Токен привязан к текущим логину и паролю: после смены любого из них старые cookie перестают работать. За reverse proxy задайте `TRUST_PROXY` (число прокси, nginx = 1), иначе лимит попыток входа (5 в минуту) общий для всех клиентов.
 
 Если том `postgres_data` остался от прошлых запусков с другой схемой, пересоздайте его: `docker compose down -v`.
 
@@ -93,7 +93,7 @@ npm run start:dev
 | `DATABASE_URL` | строка подключения PostgreSQL |
 | `CORS_ORIGIN` | origin витрины, можно списком через запятую |
 | `UPLOADS_DIR`, `PUBLIC_MEDIA_URL` | папка загрузок и публичный URL `/media` |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` / `ADMIN_PASSWORD_HASH` | вход в админку |
+| `ADMIN_LOGIN`, `ADMIN_PASSWORD` / `ADMIN_PASSWORD_HASH` | вход в админку |
 | `JWT_SECRET` | подпись cookie админки (в production заготовка отклоняется) |
 | `TRUST_PROXY`, `COOKIE_SECURE` | за reverse proxy: число прокси и secure-cookie (в production `true`) |
 | `ORDER_NOTIFY_EMAIL` | почта менеджера, на которую приходит каждая новая заявка; пусто = писем нет |
@@ -128,7 +128,7 @@ Husky запускает `npm run pre-commit` (`scripts/pre-commit.mjs`) пер�
 
 Seed-данных нет, каталог наполняется через админку (витрина: `/admin`) или админ-API:
 
-1. Войдите: `POST /api/admin/auth/login` (email и пароль из `.env`).
+1. Войдите: `POST /api/admin/auth/login` (логин и пароль из `.env`).
 2. Убедитесь, что есть опубликованная категория (`POST /api/admin/categories`) и, при необходимости, коллекция.
 3. `POST /api/admin/products`: название, `categoryId`, `sku` (уникальный), цена строкой (`"1299.00"`), `isPublished`. Slug строится из названия.
 4. Загрузите фото: `POST /api/admin/products/:id/images` (jpeg, png, webp до 10 МБ). Первое фото становится обложкой.

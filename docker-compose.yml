@@ -25,8 +25,8 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       UPLOADS_DIR: /app/uploads
       PUBLIC_MEDIA_URL: ${PUBLIC_MEDIA_URL:-http://localhost:3000/media}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@brw.local}
-      # Admin login: ADMIN_EMAIL + ADMIN_PASSWORD from .env. There is deliberately no default password.
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-BRW-COMPANY}
+      # Admin login: ADMIN_LOGIN + ADMIN_PASSWORD from .env. There is deliberately no default password.
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env (the admin panel password)}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (a long random string, for example openssl rand -hex 32)}
       TRUST_PROXY: ${TRUST_PROXY:-}

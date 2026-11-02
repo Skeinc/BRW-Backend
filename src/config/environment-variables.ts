@@ -10,6 +10,7 @@ import {
   IsUrl,
   Matches,
   Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateIf,
@@ -66,8 +67,11 @@ export class EnvironmentVariables {
   @IsUrl({ require_protocol: true, require_tld: false })
   PUBLIC_MEDIA_URL: string;
 
-  @IsEmail()
-  ADMIN_EMAIL: string;
+  /** Admin login name, matched case-insensitively. */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  ADMIN_LOGIN: string;
 
   /** Admin password in plain text. When set, it is used for login and ADMIN_PASSWORD_HASH is ignored. */
   @Transform(emptyToUndefined)

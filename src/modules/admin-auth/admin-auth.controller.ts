@@ -38,13 +38,13 @@ export class AdminAuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: LOGIN_THROTTLE_LIMIT, ttl: LOGIN_THROTTLE_TTL_MS } })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Log in with ADMIN_EMAIL and the admin password' })
+  @ApiOperation({ summary: 'Log in with ADMIN_LOGIN and the admin password' })
   @ApiOkResponse({ description: 'Logged in; the auth cookie is set' })
-  @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED: wrong email or password' })
+  @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED: wrong login or password' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<AdminProfile> {
     const token: string = await this.adminAuthService.login(dto);
     res.cookie(ADMIN_COOKIE_NAME, token, this.buildCookieOptions(ADMIN_TOKEN_TTL_SECONDS * 1000));
-    return { email: dto.email.trim().toLowerCase() };
+    return { login: dto.login.trim().toLowerCase() };
   }
 
   /**
@@ -67,7 +67,7 @@ export class AdminAuthController {
   @ApiOkResponse({ description: 'The logged-in admin' })
   @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED: no valid auth cookie' })
   getProfile(@Req() req: AdminRequest): AdminProfile {
-    return { email: req.admin?.email ?? '' };
+    return { login: req.admin?.login ?? '' };
   }
 
   private buildCookieOptions(maxAge?: number): CookieOptions {
