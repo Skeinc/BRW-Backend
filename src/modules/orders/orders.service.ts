@@ -65,18 +65,22 @@ export class OrdersService {
       comment,
       total: this.calculateTotal(lines),
     };
-    const number: string = await this.ordersRepository.createWithLines({ values, lines });
-    void this.notifyManager({ number, values, lines });
+    const { id, number, createdAt } = await this.ordersRepository.createWithLines({ values, lines });
+    void this.notifyManager({ id, number, createdAt, values, lines });
     return { number };
   }
 
   /** Emails the new order to ORDER_NOTIFY_EMAIL. A mail failure is logged and never fails the order. */
   private async notifyManager({
+    id,
     number,
+    createdAt,
     values,
     lines,
   }: {
+    id: string;
     number: string;
+    createdAt: Date;
     values: NewOrderValues;
     lines: NewOrderLine[];
   }): Promise<void> {
@@ -85,11 +89,26 @@ export class OrdersService {
       return;
     }
     try {
-      const { subject, text } = buildOrderNotification({ number, values, lines });
-      await this.mailService.send({ to, subject, text, replyTo: values.email ?? undefined });
+      const adminUrl: string = this.buildAdminOrderUrl(id);
+      const { subject, text, html } = buildOrderNotification({
+        number,
+        values,
+        lines,
+        adminUrl,
+        createdAt,
+      });
+      await this.mailService.send({ to, subject, text, html, replyTo: values.email ?? undefined });
     } catch (error) {
       this.logger.error(`Could not email order ${number}`, error instanceof Error ? error.stack : String(error));
     }
+  }
+
+  /** Link that opens the order in the admin panel; the origin is PUBLIC_SITE_URL, or the first CORS_ORIGIN. */
+  private buildAdminOrderUrl(id: string): string {
+    const siteUrl: string | undefined = this.configService.get('PUBLIC_SITE_URL', { infer: true });
+    const fallback: string = this.configService.get('CORS_ORIGIN', { infer: true }).split(',')[0];
+    const origin: string = (siteUrl ?? fallback).trim().replace(/\/+$/, '');
+    return `${origin}/admin/orders?orderId=${id}`;
   }
 
   /** A page of orders, optionally filtered by status. */

@@ -78,15 +78,21 @@ export class OrdersRepository {
     return record;
   }
 
-  /** Writes the order and its lines in one transaction and returns the generated number. */
-  async createWithLines({ values, lines }: { values: NewOrderValues; lines: NewOrderLine[] }): Promise<string> {
+  /** Writes the order and its lines in one transaction and returns the generated id and number. */
+  async createWithLines({
+    values,
+    lines,
+  }: {
+    values: NewOrderValues;
+    lines: NewOrderLine[];
+  }): Promise<{ id: string; number: string; createdAt: Date }> {
     return this.db.transaction(async (tx) => {
       const [created] = await tx
         .insert(orderRequest)
         .values(values)
-        .returning({ id: orderRequest.id, number: orderRequest.number });
+        .returning({ id: orderRequest.id, number: orderRequest.number, createdAt: orderRequest.createdAt });
       await tx.insert(orderRequestItem).values(lines.map((line) => ({ ...line, orderRequestId: created.id })));
-      return created.number;
+      return created;
     });
   }
 }

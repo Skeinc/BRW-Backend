@@ -58,6 +58,12 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   CORS_ORIGIN: string;
 
+  /** Storefront origin, used for links in emails. Falls back to the first CORS_ORIGIN. */
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsUrl({ require_protocol: true, require_tld: false })
+  PUBLIC_SITE_URL?: string;
+
   /** Directory for uploaded media; created on first write. Relative paths resolve from the working directory. */
   @IsString()
   @IsNotEmpty()

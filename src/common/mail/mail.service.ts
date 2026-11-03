@@ -34,10 +34,10 @@ export class MailService {
   }
 
   /** Sends one email; rejects when the SMTP server refuses it. Does nothing when mail is disabled. */
-  async send({ to, subject, text, replyTo }: SendMailInput): Promise<void> {
+  async send({ to, subject, text, html, replyTo }: SendMailInput): Promise<void> {
     if (this.transporter === undefined) {
       return;
     }
-    await this.transporter.sendMail({ from: this.from, to, subject, text, replyTo });
+    await this.transporter.sendMail({ from: this.from, to, subject, text, html, replyTo });
   }
 }
