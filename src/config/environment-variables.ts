@@ -110,6 +110,11 @@ export class EnvironmentVariables {
   @IsBoolean()
   COOKIE_SECURE: boolean = false;
 
+  /** SameSite of the admin cookie. Use `none` (needs COOKIE_SECURE=true) when the storefront and the API are on different sites. */
+  @Transform(({ value }) => emptyToUndefined({ value }))
+  @IsIn(['lax', 'strict', 'none'])
+  COOKIE_SAME_SITE: 'lax' | 'strict' | 'none' = 'lax';
+
   /** Serves Swagger at `/api/docs`. Defaults to on outside production and off in production. */
   @IsOptional()
   @Transform(({ value }) => parseBoolean({ value: emptyToUndefined({ value }) }))

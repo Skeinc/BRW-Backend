@@ -22,12 +22,14 @@ type AdminRequest = Request & { admin?: AdminProfile };
 @Controller('admin/auth')
 export class AdminAuthController {
   private readonly isCookieSecure: boolean;
+  private readonly cookieSameSite: 'lax' | 'strict' | 'none';
 
   constructor(
     private readonly adminAuthService: AdminAuthService,
     configService: ConfigService<EnvironmentVariables, true>,
   ) {
     this.isCookieSecure = configService.getOrThrow('COOKIE_SECURE', { infer: true });
+    this.cookieSameSite = configService.getOrThrow('COOKIE_SAME_SITE', { infer: true });
   }
 
   /**
@@ -71,6 +73,6 @@ export class AdminAuthController {
   }
 
   private buildCookieOptions(maxAge?: number): CookieOptions {
-    return { httpOnly: true, sameSite: 'lax', secure: this.isCookieSecure, path: '/', maxAge };
+    return { httpOnly: true, sameSite: this.cookieSameSite, secure: this.isCookieSecure, path: '/', maxAge };
   }
 }

@@ -4,6 +4,8 @@ import { createTransport, type Transporter } from 'nodemailer';
 import type { EnvironmentVariables } from '../../config/environment-variables.js';
 import type { SendMailInput } from './mail.types.js';
 
+const SMTP_TIMEOUT_MS = 10_000;
+
 /** Sends email over SMTP. It stays disabled (and `send` does nothing) while SMTP_HOST is not set. */
 @Injectable()
 export class MailService {
@@ -24,6 +26,9 @@ export class MailService {
       host,
       port: configService.getOrThrow('SMTP_PORT', { infer: true }),
       secure: configService.getOrThrow('SMTP_SECURE', { infer: true }),
+      connectionTimeout: SMTP_TIMEOUT_MS,
+      greetingTimeout: SMTP_TIMEOUT_MS,
+      socketTimeout: SMTP_TIMEOUT_MS,
       auth: user !== undefined && password !== undefined ? { user, pass: password } : undefined,
     });
   }

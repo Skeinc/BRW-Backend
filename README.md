@@ -96,6 +96,7 @@ npm run start:dev
 | `ADMIN_LOGIN`, `ADMIN_PASSWORD` / `ADMIN_PASSWORD_HASH` | вход в админку |
 | `JWT_SECRET` | подпись cookie админки (в production заготовка отклоняется) |
 | `TRUST_PROXY`, `COOKIE_SECURE` | за reverse proxy: число прокси и secure-cookie (в production `true`) |
+| `COOKIE_SAME_SITE` | `lax` (по умолчанию), `strict` или `none`; `none` нужен, когда витрина и API на разных сайтах (например, два домена `*.up.railway.app`), и требует `COOKIE_SECURE=true` |
 | `ORDER_NOTIFY_EMAIL` | почта менеджера, на которую приходит каждая новая заявка; пусто = писем нет |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | SMTP-сервер для писем (обязателен `SMTP_HOST`, если задан `ORDER_NOTIFY_EMAIL`) |
 | `SWAGGER_ENABLED` | Swagger на `/api/docs`; по умолчанию включён вне production и выключен в production |
