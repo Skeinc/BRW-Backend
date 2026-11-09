@@ -23,6 +23,7 @@ import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
 import { toCollectionRef } from './lib/to-collection-ref.js';
 import { buildVisibleCategoryIds } from '../categories/lib/build-visible-category-ids.js';
+import { buildCategoryMembershipCondition } from './lib/build-category-membership-condition.js';
 import { DIMENSION_COLUMNS } from './lib/build-dimension-conditions.js';
 import { buildPublicProductOrder } from './lib/build-public-product-order.js';
 import { buildPublicProductWhere } from './lib/build-public-product-where.js';
@@ -119,7 +120,13 @@ export class ProductsRepository {
         .innerJoin(category, eq(category.id, product.categoryId))
         .leftJoin(collection, and(eq(collection.id, product.collectionId), eq(collection.isPublished, true)))
         .where(where)
-        .orderBy(...buildPublicProductOrder(sort))
+        .orderBy(
+          ...buildPublicProductOrder({
+            sort,
+            categorySlug: filters.category,
+            hasCollection: filters.collection !== undefined,
+          }),
+        )
         .limit(pageSize)
         .offset((page - 1) * pageSize),
       this.db.select({ total: count() }).from(product).where(where),
@@ -311,14 +318,14 @@ export class ProductsRepository {
 
   /** Matches the category itself and every category below it. */
   private buildCategoryTreeCondition(categoryId: string): SQL {
-    return sql`${product.categoryId} IN (
+    return buildCategoryMembershipCondition(sql`
       WITH RECURSIVE category_tree AS (
         SELECT ${category.id} AS id FROM ${category} WHERE ${category.id} = ${categoryId}
         UNION ALL
         SELECT child.id FROM ${category} child JOIN category_tree parent ON child.parent_id = parent.id
       )
       SELECT id FROM category_tree
-    )`;
+    `);
   }
 
   /** Case-insensitive substring match on name (served by the trigram index) or SKU. */

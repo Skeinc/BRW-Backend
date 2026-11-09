@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq, isNull, max } from 'drizzle-orm';
+import { asc, count, eq, isNull, max, sql } from 'drizzle-orm';
 import type { SortOrderChange } from '../../common/lib/reorder-items.js';
 import { DRIZZLE } from '../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../database/drizzle.types.js';
@@ -85,13 +85,15 @@ export class CategoriesRepository {
     return new Map(rows.map((row) => [row.categoryId, row.total]));
   }
 
-  /** Read-only: published product counts per category id, products directly in the category only. */
+  /** Read-only: published product counts per category id, products listed directly in the category (own or extra). */
   async countPublishedProductsByCategory(): Promise<Map<string, number>> {
-    const rows = await this.db
-      .select({ categoryId: product.categoryId, total: count() })
-      .from(product)
-      .where(eq(product.isPublished, true))
-      .groupBy(product.categoryId);
-    return new Map(rows.map((row) => [row.categoryId, row.total]));
+    const rows = await this.db.execute<{ category_id: string; total: number }>(sql`
+      SELECT listed.category_id, count(*)::int AS total FROM (
+        SELECT p.id, p.category_id FROM product p WHERE p.is_published
+        UNION
+        SELECT pc.product_id, pc.category_id FROM product_category pc JOIN product p ON p.id = pc.product_id WHERE p.is_published
+      ) listed GROUP BY listed.category_id
+    `);
+    return new Map(rows.map((row) => [row.category_id, row.total]));
   }
 }

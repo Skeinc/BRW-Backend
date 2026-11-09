@@ -64,6 +64,20 @@
       "when": 1793277866308,
       "tag": "0008_rooms_solutions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794237968083,
+      "tag": "0009_product_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794238690048,
+      "tag": "0010_product_category_position",
+      "breakpoints": true
     }
   ]
 }
