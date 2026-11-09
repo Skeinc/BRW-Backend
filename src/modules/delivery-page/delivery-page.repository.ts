@@ -17,7 +17,7 @@ export class DeliveryPageRepository {
       .select({ content: pageContent.content })
       .from(pageContent)
       .where(eq(pageContent.key, DELIVERY_PAGE_KEY));
-    return row?.content;
+    return row?.content as DeliveryPageContent | undefined;
   }
 
   /** Inserts or replaces the content and returns it. */
@@ -27,6 +27,6 @@ export class DeliveryPageRepository {
       .values({ key: DELIVERY_PAGE_KEY, content })
       .onConflictDoUpdate({ target: pageContent.key, set: { content } })
       .returning({ content: pageContent.content });
-    return row.content;
+    return row.content as DeliveryPageContent;
   }
 }

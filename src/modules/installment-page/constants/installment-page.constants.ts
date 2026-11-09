@@ -1,0 +1,13 @@
+export const INSTALLMENT_PAGE_KEY = 'installment';
+export const CARDS_MIN = 1;
+export const CARDS_MAX = 12;
+export const LOANS_MIN = 1;
+export const LOANS_MAX = 20;
+export const BADGES_MAX = 8;
+export const FACTS_MAX = 12;
+export const DETAILS_MAX = 12;
+export const STEPS_MAX = 20;
+export const SHORT_TEXT_MAX_LENGTH = 120;
+export const LONG_TEXT_MAX_LENGTH = 1000;
+export const MONTHS_MIN = 1;
+export const MONTHS_MAX = 600;
