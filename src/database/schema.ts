@@ -9,6 +9,7 @@ import { orderRequest } from './schema/order-request.js';
 import { orderRequestItem } from './schema/order-request-item.js';
 import { orderRequestNumberSequence } from './schema/order-request-number.sequence.js';
 import { orderStatusEnum } from './schema/order-status.enum.js';
+import { pageContent } from './schema/page-content.js';
 import { paymentMethodEnum } from './schema/payment-method.enum.js';
 import { product } from './schema/product.js';
 import { room } from './schema/room.js';
@@ -34,6 +35,7 @@ export const schema = {
   orderRequestItem,
   orderRequestNumberSequence,
   orderStatusEnum,
+  pageContent,
   paymentMethodEnum,
   product,
   room,

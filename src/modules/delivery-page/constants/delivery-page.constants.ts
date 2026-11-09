@@ -1,0 +1,13 @@
+export const DELIVERY_PAGE_KEY = 'delivery-and-payment';
+export const PAYMENT_CARDS_COUNT = 3;
+export const DELIVERY_CARDS_COUNT = 3;
+export const RECEIVING_STEPS_MIN = 1;
+export const RECEIVING_STEPS_MAX = 12;
+export const DOCUMENTS_MIN = 1;
+export const DOCUMENTS_MAX = 12;
+export const FAQ_ITEMS_MAX = 30;
+export const CARD_TITLE_MAX_LENGTH = 120;
+export const CARD_TEXT_MAX_LENGTH = 1000;
+export const DOCUMENT_MAX_LENGTH = 300;
+export const FAQ_QUESTION_MAX_LENGTH = 300;
+export const FAQ_ANSWER_MAX_LENGTH = 2000;
