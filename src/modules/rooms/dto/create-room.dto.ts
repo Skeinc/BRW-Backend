@@ -1,6 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import {
+  ROOM_MAX_COLLECTIONS,
   ROOM_NAME_MAX_LENGTH,
   ROOM_SEO_DESCRIPTION_MAX_LENGTH,
   ROOM_SEO_TITLE_MAX_LENGTH,
@@ -35,4 +46,23 @@ export class CreateRoomDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Kitchens: no solutions and no cart, the room shows `collectionIds` with photos, text and contacts',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isConsultationOnly?: boolean;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Collections of a consultation-only room in display order; replaces the current list',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(ROOM_MAX_COLLECTIONS)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  collectionIds?: string[];
 }

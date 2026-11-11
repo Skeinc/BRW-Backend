@@ -28,7 +28,7 @@ import type { CreateCollectionDto } from './dto/create-collection.dto.js';
 import type { ListCollectionsQueryDto } from './dto/list-collections-query.dto.js';
 import type { UpdateCollectionDto } from './dto/update-collection.dto.js';
 
-const NULLABLE_FIELDS: readonly string[] = ['description', 'seoTitle', 'seoDescription'];
+const NULLABLE_FIELDS: readonly string[] = ['description', 'priceFrom', 'seoTitle', 'seoDescription'];
 
 /** Business rules of collections: unique slugs, slug redirects, safe deletion. */
 @Injectable()

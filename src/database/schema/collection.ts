@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { boolean, integer, numeric, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 /** Furniture collection (series), for example JASMIN or CLASSIC. */
 export const collection = pgTable('collection', {
@@ -6,6 +6,8 @@ export const collection = pgTable('collection', {
   slug: varchar('slug', { length: 120 }).notNull().unique(),
   name: varchar('name', { length: 120 }).notNull(),
   description: text('description'),
+  /** Starting price shown as "от …" on the collection page of a consultation-only room. */
+  priceFrom: numeric('price_from', { precision: 12, scale: 2 }),
   seoTitle: varchar('seo_title', { length: 120 }),
   seoDescription: varchar('seo_description', { length: 320 }),
   sortOrder: integer('sort_order').notNull().default(0),

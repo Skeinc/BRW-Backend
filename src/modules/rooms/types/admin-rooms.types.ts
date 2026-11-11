@@ -10,6 +10,8 @@ export type RoomPatch = Partial<Omit<NewRoomValues, 'id' | 'createdAt' | 'update
 export type RoomView = typeof room.$inferSelect & {
   cover: MediaCover | null;
   solutionCount: number;
+  /** Collections shown in a consultation-only room, in display order. */
+  collectionIds: string[];
 };
 
 /** A room with its image gallery. */

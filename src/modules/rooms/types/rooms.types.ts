@@ -27,13 +27,19 @@ export type PublicSolution = Pick<SolutionRecord, 'id' | 'name' | 'description' 
   products: PublicSolutionProduct[];
 };
 
+/** Collection linked to a consultation-only room. */
+export type RoomCollectionRef = { roomId: string; collectionId: string };
+
 /** A room card of the home page and the room list. */
-export type PublicRoomItem = Pick<RoomRecord, 'id' | 'name'> & {
+export type PublicRoomItem = Pick<RoomRecord, 'id' | 'name' | 'isConsultationOnly'> & {
   imageUrl: string | null;
   collectionCount: number;
 };
 
-/** A collection card inside a room; the photo is the first solution picture of the collection in that room. */
+/**
+ * A collection card inside a room; the photo is the first solution picture of the collection in that room, or the
+ * collection cover in a consultation-only room.
+ */
 export type PublicRoomCollection = Pick<CollectionRecord, 'id' | 'name'> & {
   imageUrl: string | null;
   solutionCount: number;
@@ -45,10 +51,18 @@ export type PublicRoomDetail = PublicRoomItem &
     collections: PublicRoomCollection[];
   };
 
-/** A collection inside a room: its text and the ready-made solutions of that room. */
+/**
+ * A collection inside a room: its text, photos and the ready-made solutions of that room. A consultation-only room
+ * has no solutions; the page shows the collection photos, `priceFrom` and the contacts instead.
+ */
 export type PublicRoomCollectionDetail = {
-  room: Pick<RoomRecord, 'id' | 'name'>;
-  collection: Pick<CollectionRecord, 'id' | 'slug' | 'name' | 'description' | 'seoTitle' | 'seoDescription'>;
+  room: Pick<RoomRecord, 'id' | 'name' | 'isConsultationOnly'>;
+  collection: Pick<
+    CollectionRecord,
+    'id' | 'slug' | 'name' | 'description' | 'priceFrom' | 'seoTitle' | 'seoDescription'
+  > & {
+    images: MediaCoverImage[];
+  };
   solutions: PublicSolution[];
 };
 

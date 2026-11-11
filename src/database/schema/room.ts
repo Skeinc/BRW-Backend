@@ -1,6 +1,10 @@
 import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
-/** Room of the house (living room, bedroom, ...) that groups ready-made solutions on the storefront. */
+/**
+ * Room of the house (living room, bedroom, ...) that groups ready-made solutions on the storefront. A room with
+ * `isConsultationOnly` (kitchens) has no solutions: it shows the collections linked in `room_collection` with photos,
+ * a text and a contact block instead of the cart.
+ */
 export const room = pgTable('room', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 120 }).notNull(),
@@ -8,6 +12,7 @@ export const room = pgTable('room', {
   seoTitle: varchar('seo_title', { length: 120 }),
   seoDescription: varchar('seo_description', { length: 320 }),
   sortOrder: integer('sort_order').notNull().default(0),
+  isConsultationOnly: boolean('is_consultation_only').notNull().default(false),
   isPublished: boolean('is_published').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })

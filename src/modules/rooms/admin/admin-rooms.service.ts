@@ -39,11 +39,15 @@ export class AdminRoomsService {
       entityType: 'room',
       entityIds: pageRecords.map((record) => record.id),
     });
-    const counts: Map<string, number> = await this.roomsRepository.countSolutions();
+    const [counts, links] = await Promise.all([
+      this.roomsRepository.countSolutions(),
+      this.roomsRepository.findAllCollectionIds(),
+    ]);
     const items: RoomView[] = pageRecords.map((record) => ({
       ...record,
       cover: covers.get(record.id) ?? null,
       solutionCount: counts.get(record.id) ?? 0,
+      collectionIds: links.get(record.id) ?? [],
     }));
     return buildPaginatedResult({ items, page, pageSize, total: records.length });
   }
@@ -56,23 +60,25 @@ export class AdminRoomsService {
   /** Creates a room at the end of the list. */
   async create(dto: CreateRoomDto): Promise<RoomDetailView> {
     const sortOrder: number = await this.roomsRepository.nextSortOrder();
-    const { name, description, seoTitle, seoDescription, isPublished } = dto;
-    const record: RoomRecord = await this.roomsRepository.insert({
-      name,
-      description,
-      seoTitle,
-      seoDescription,
-      isPublished,
-      sortOrder,
-    });
+    const { collectionIds, ...fields } = dto;
+    await this.assertCollectionsExist(collectionIds);
+    const record: RoomRecord = await this.roomsRepository.insert({ ...fields, sortOrder });
+    if (collectionIds !== undefined) {
+      await this.roomsRepository.replaceCollections({ roomId: record.id, collectionIds });
+    }
     return this.toDetail(record);
   }
 
-  /** Updates a room; `null` clears a text field. */
+  /** Updates a room; `null` clears a text field, `collectionIds` replaces the linked collections. */
   async update(id: string, dto: UpdateRoomDto): Promise<RoomDetailView> {
     assertNoNullFields({ dto, nullableFields: NULLABLE_FIELDS });
     const existing: RoomRecord = await this.getRecordOrThrow(id);
-    const patch: RoomPatch = Object.assign({}, dto);
+    const { collectionIds, ...fields } = dto;
+    await this.assertCollectionsExist(collectionIds);
+    if (collectionIds !== undefined) {
+      await this.roomsRepository.replaceCollections({ roomId: id, collectionIds });
+    }
+    const patch: RoomPatch = Object.assign({}, fields);
     if (!hasDefinedValues(patch)) {
       return this.toDetail(existing);
     }
@@ -107,9 +113,18 @@ export class AdminRoomsService {
     return record;
   }
 
+  private async assertCollectionsExist(collectionIds: string[] = []): Promise<void> {
+    if ((await this.roomsRepository.countExistingCollections(collectionIds)) !== collectionIds.length) {
+      throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
+    }
+  }
+
   private async toDetail(record: RoomRecord): Promise<RoomDetailView> {
-    const images = await this.mediaService.listImages({ entityType: 'room', entityId: record.id });
-    const solutionCount: number = await this.roomsRepository.countSolutionsOf(record.id);
-    return { ...record, cover: getCover(images), solutionCount, images };
+    const [images, solutionCount, collectionIds] = await Promise.all([
+      this.mediaService.listImages({ entityType: 'room', entityId: record.id }),
+      this.roomsRepository.countSolutionsOf(record.id),
+      this.roomsRepository.findCollectionIds(record.id),
+    ]);
+    return { ...record, cover: getCover(images), solutionCount, images, collectionIds };
   }
 }

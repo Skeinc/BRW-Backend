@@ -7,6 +7,7 @@ import { COLLECTION_SLUG_MAX_LENGTH } from '../constants/collections.constants.j
 const NAME_MAX_LENGTH = 120;
 const SEO_TITLE_MAX_LENGTH = 120;
 const SEO_DESCRIPTION_MAX_LENGTH = 320;
+const MONEY_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
 
 /** Body of POST /api/admin/collections. */
 export class CreateCollectionDto {
@@ -27,6 +28,16 @@ export class CreateCollectionDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '1500.00',
+    description: 'Starting price "от …" on the collection page of a consultation-only room, up to 2 decimals',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(MONEY_PATTERN, { message: 'priceFrom must be a price with up to 2 decimals' })
+  priceFrom?: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()

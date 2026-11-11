@@ -13,6 +13,7 @@ import { pageContent } from './schema/page-content.js';
 import { paymentMethodEnum } from './schema/payment-method.enum.js';
 import { product } from './schema/product.js';
 import { room } from './schema/room.js';
+import { roomCollection } from './schema/room-collection.js';
 import { slide } from './schema/slide.js';
 import { solution } from './schema/solution.js';
 import { solutionProduct } from './schema/solution-product.js';
@@ -39,6 +40,7 @@ export const schema = {
   paymentMethodEnum,
   product,
   room,
+  roomCollection,
   slide,
   solution,
   solutionProduct,

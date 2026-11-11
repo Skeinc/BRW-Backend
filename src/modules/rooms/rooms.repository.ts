@@ -5,9 +5,16 @@ import type { DrizzleDatabase } from '../../database/drizzle.types.js';
 import { collection } from '../../database/schema/collection.js';
 import { product } from '../../database/schema/product.js';
 import { room } from '../../database/schema/room.js';
+import { roomCollection } from '../../database/schema/room-collection.js';
 import { solution } from '../../database/schema/solution.js';
 import { solutionProduct } from '../../database/schema/solution-product.js';
-import type { CollectionRecord, RoomRecord, SolutionRecord, SolutionRef } from './types/rooms.types.js';
+import type {
+  CollectionRecord,
+  RoomCollectionRef,
+  RoomRecord,
+  SolutionRecord,
+  SolutionRef,
+} from './types/rooms.types.js';
 
 /** Product row of a solution element. */
 export type SolutionElementRow = {
@@ -131,5 +138,17 @@ export class RoomsRepository {
       .innerJoin(product, eq(product.id, solutionProduct.productId))
       .where(and(inArray(solutionProduct.solutionId, solutionIds), eq(product.isPublished, true)))
       .orderBy(asc(solutionProduct.sortOrder), asc(product.name));
+  }
+
+  /** Published collections linked to consultation-only rooms, in their order; optionally only those of one room. */
+  async findPublishedCollectionLinks(roomId?: string): Promise<RoomCollectionRef[]> {
+    return this.db
+      .select({ roomId: roomCollection.roomId, collectionId: roomCollection.collectionId })
+      .from(roomCollection)
+      .innerJoin(collection, eq(collection.id, roomCollection.collectionId))
+      .where(
+        and(eq(collection.isPublished, true), roomId === undefined ? undefined : eq(roomCollection.roomId, roomId)),
+      )
+      .orderBy(asc(roomCollection.sortOrder));
   }
 }

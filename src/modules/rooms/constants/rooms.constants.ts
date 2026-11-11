@@ -4,3 +4,5 @@ export const ROOM_SEO_DESCRIPTION_MAX_LENGTH = 320;
 export const SOLUTION_NAME_MAX_LENGTH = 160;
 /** Most elements one solution can list. */
 export const SOLUTION_MAX_PRODUCTS = 50;
+/** Most collections one consultation-only room can show. */
+export const ROOM_MAX_COLLECTIONS = 100;

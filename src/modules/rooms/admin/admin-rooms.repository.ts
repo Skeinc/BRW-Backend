@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq, max } from 'drizzle-orm';
+import { asc, count, eq, inArray, max } from 'drizzle-orm';
 import type { SortOrderChange } from '../../../common/lib/reorder-items.js';
 import { DRIZZLE } from '../../../database/drizzle.constant.js';
 import type { DrizzleDatabase } from '../../../database/drizzle.types.js';
+import { collection } from '../../../database/schema/collection.js';
 import { room } from '../../../database/schema/room.js';
+import { roomCollection } from '../../../database/schema/room-collection.js';
 import { solution } from '../../../database/schema/solution.js';
 import type { RoomRecord } from '../types/rooms.types.js';
 import type { NewRoomValues, RoomPatch } from '../types/admin-rooms.types.js';
@@ -69,5 +71,48 @@ export class AdminRoomsRepository {
   /** Deletes a row by id. */
   async delete(id: string): Promise<void> {
     await this.db.delete(room).where(eq(room.id, id));
+  }
+
+  /** Ids of the linked collections per room id, in display order. */
+  async findAllCollectionIds(): Promise<Map<string, string[]>> {
+    const rows = await this.db
+      .select({ roomId: roomCollection.roomId, collectionId: roomCollection.collectionId })
+      .from(roomCollection)
+      .orderBy(asc(roomCollection.sortOrder));
+    return rows.reduce((byRoom, row) => {
+      byRoom.set(row.roomId, [...(byRoom.get(row.roomId) ?? []), row.collectionId]);
+      return byRoom;
+    }, new Map<string, string[]>());
+  }
+
+  /** Ids of the collections linked to a room, in display order. */
+  async findCollectionIds(roomId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ collectionId: roomCollection.collectionId })
+      .from(roomCollection)
+      .where(eq(roomCollection.roomId, roomId))
+      .orderBy(asc(roomCollection.sortOrder));
+    return rows.map((row) => row.collectionId);
+  }
+
+  /** Number of the given collection ids that exist. */
+  async countExistingCollections(ids: string[]): Promise<number> {
+    if (ids.length === 0) {
+      return 0;
+    }
+    const [row] = await this.db.select({ total: count() }).from(collection).where(inArray(collection.id, ids));
+    return row.total;
+  }
+
+  /** Replaces the collections linked to a room; their order is the order of `collectionIds`. */
+  async replaceCollections({ roomId, collectionIds }: { roomId: string; collectionIds: string[] }): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(roomCollection).where(eq(roomCollection.roomId, roomId));
+      if (collectionIds.length > 0) {
+        await tx
+          .insert(roomCollection)
+          .values(collectionIds.map((collectionId, sortOrder) => ({ roomId, collectionId, sortOrder })));
+      }
+    });
   }
 }
