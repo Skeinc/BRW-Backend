@@ -38,6 +38,11 @@ Swagger: <http://localhost:3000/api/docs>.
 | Категории | `categories`: страница дерева с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&depth`: страница это ровно pageSize строк дерева (родители перед детьми)), `GET tree` (всё дерево для выбора родителя), CRUD, `PATCH :id/move` (порядок среди соседей), до 3 уровней |
 | Коллекции | `collections`: страница списка с поиском и фильтрами (`GET ?page&pageSize&q&isPublished&hasProducts`), `GET options` (все коллекции как id и название для выбора), CRUD, `PATCH :id/move` (порядок) |
 | Товары | CRUD `products`, список с фильтрами `categoryId`, `collectionId`, `q`, `isPublished` |
+| Комнаты | `rooms`: список, CRUD, `PATCH :id/move` (порядок). Комната с `isConsultationOnly` (например, «Кухни») без готовых решений и корзины: показывает привязанные коллекции (`collectionIds` по порядку) с фото, текстом и «цена от» (`priceFrom` коллекции) |
+| Готовые решения | CRUD `solutions`: набор товаров коллекции для комнаты |
+| Новости | CRUD `news` |
+| Слайды | CRUD `slides`, `PATCH :id/move` (порядок) |
+| Страницы | `GET/PUT installment-page` (рассрочка), `GET/PUT delivery-page` (доставка и оплата): редактируемое содержимое |
 | Статьи | CRUD `articles` |
 | Заявки | `GET orders` (фильтр `status`, поиск `q` по номеру, имени и телефону; телефон ищется и по цифрам, без учёта пробелов и скобок), `GET orders/:id`, `PATCH orders/:id` (смена статуса по цепочке `new → in_progress → done`, отмена; иначе `ORDER_STATUS_INVALID`) |
 | Фото | `products`, `categories`, `collections`, `articles`: `GET/POST /:id/images`, `PATCH /:id/images/order`, `PATCH/DELETE /:id/images/:imageId`; картинки в тексте статей: `POST/DELETE media/images` |
@@ -53,10 +58,14 @@ Swagger: <http://localhost:3000/api/docs>.
 | --- | --- |
 | `GET categories`, `GET categories/:id` | дерево категорий и карточка категории |
 | `GET collections`, `GET collections/:id` | коллекции |
+| `GET rooms`, `GET rooms/:id`, `GET rooms/:roomId/collections/:collectionId`, `GET rooms/collection/:collectionId/solutions` | комнаты, их коллекции и готовые решения |
 | `GET products` | каталог: фильтры, сортировка, `page`, `pageSize` (максимум 48) |
 | `GET products/facets` | значения фильтров для текущей выборки |
 | `GET products/:id` | карточка товара |
 | `GET articles`, `GET articles/:id` | статьи (`pageSize` максимум 48) |
+| `GET news`, `GET news/:id` | новости |
+| `GET slides` | слайды главной |
+| `GET installment-page`, `GET delivery-page` | содержимое страниц рассрочки и доставки |
 | `POST orders` | заявка с витрины (лимит попыток) |
 | `GET seo/urls` | slug и `updatedAt` опубликованных сущностей для sitemap |
 | `GET seo/resolve` | новый адрес переименованного slug (для 301) |
@@ -81,7 +90,7 @@ npm run start:dev
 
 `src/modules/<модуль>`: в корне `module`, `controller`, `service`, `repository`, остальное по папкам (`dto/`, `types/`, `constants/`, `lib/`, `admin/`). Подробные правила в `CLAUDE.md`.
 
-Модули: `admin-auth`, `categories`, `collections`, `products`, `articles`, `orders`, `media` (все изображения и галереи), `slug-redirects`, `analytics`, `seo`, `health`.
+Модули: `admin-auth`, `categories`, `collections`, `rooms` (комнаты и готовые решения), `products`, `articles`, `news`, `slides`, `installment-page`, `delivery-page`, `orders`, `media` (все изображения и галереи), `slug-redirects`, `analytics`, `seo`, `health`.
 
 ## Переменные окружения
 
