@@ -1,5 +1,6 @@
 import type { MediaCover, MediaImageView } from '../../media/types/media.types.js';
 import type { collection } from '../../../database/schema/collection.js';
+import type { LinkedRoom } from '../../rooms/types/admin-rooms.types.js';
 
 export type CollectionRecord = typeof collection.$inferSelect;
 
@@ -11,6 +12,8 @@ export type CollectionPatch = Partial<Omit<NewCollectionValues, 'id' | 'createdA
 export type CollectionView = CollectionRecord & {
   productCount: number;
   cover: MediaCover | null;
+  /** Rooms that show the collection, in room order, with its solution counts there. */
+  rooms: LinkedRoom[];
 };
 
 /** Id and name of a collection, for pickers. */

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MediaModule } from '../media/media.module.js';
+import { AdminRoomCollectionsRepository } from './admin/admin-room-collections.repository.js';
+import { AdminRoomCollectionsService } from './admin/admin-room-collections.service.js';
 import { AdminRoomsController } from './admin/admin-rooms.controller.js';
 import { AdminRoomsRepository } from './admin/admin-rooms.repository.js';
 import { AdminRoomsService } from './admin/admin-rooms.service.js';
@@ -10,7 +12,7 @@ import { RoomsController } from './rooms.controller.js';
 import { RoomsRepository } from './rooms.repository.js';
 import { RoomsService } from './rooms.service.js';
 
-/** Wires the storefront and admin sides of rooms and ready-made solutions. */
+/** Wires the storefront and admin sides of rooms, their collections and ready-made solutions. */
 @Module({
   imports: [MediaModule],
   controllers: [RoomsController, AdminRoomsController, AdminSolutionsController],
@@ -21,6 +23,9 @@ import { RoomsService } from './rooms.service.js';
     AdminRoomsService,
     AdminSolutionsRepository,
     AdminSolutionsService,
+    AdminRoomCollectionsRepository,
+    AdminRoomCollectionsService,
   ],
+  exports: [AdminRoomCollectionsService],
 })
 export class RoomsModule {}

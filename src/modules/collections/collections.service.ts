@@ -11,6 +11,7 @@ import { isUniqueViolation } from '../../common/lib/is-unique-violation.js';
 import { resolveSlugCandidate } from '../../common/lib/resolve-slug-candidate.js';
 import { getCover } from '../media/lib/get-cover.js';
 import { MediaService } from '../media/media.service.js';
+import { AdminRoomCollectionsService } from '../rooms/admin/admin-room-collections.service.js';
 import { SlugRedirectsService } from '../slug-redirects/slug-redirects.service.js';
 import { COLLECTION_SLUG_MAX_LENGTH } from './constants/collections.constants.js';
 import { CollectionsRepository } from './collections.repository.js';
@@ -30,21 +31,23 @@ import type { UpdateCollectionDto } from './dto/update-collection.dto.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['description', 'priceFrom', 'seoTitle', 'seoDescription'];
 
-/** Business rules of collections: unique slugs, slug redirects, safe deletion. */
+/** Business rules of collections: unique slugs, slug redirects, the rooms that show them, safe deletion. */
 @Injectable()
 export class CollectionsService {
   constructor(
     private readonly collectionsRepository: CollectionsRepository,
     private readonly slugRedirectsService: SlugRedirectsService,
     private readonly mediaService: MediaService,
+    private readonly roomCollectionsService: AdminRoomCollectionsService,
   ) {}
 
   /** One page of collections by sort order, after the search and filters (a few dozen rows, filtered in memory). */
   async list(query: ListCollectionsQueryDto): Promise<PaginatedResult<CollectionView>> {
     const { page, pageSize } = query;
-    const [records, counts] = await Promise.all([
+    const [records, counts, rooms] = await Promise.all([
       this.collectionsRepository.findAll(),
       this.collectionsRepository.countProductsByCollection(),
+      this.roomCollectionsService.listRoomsByCollection(),
     ]);
     const matching: CollectionRecord[] = records.filter((record) =>
       this.matchesFilters({ record, productCount: counts.get(record.id) ?? 0, query }),
@@ -58,6 +61,7 @@ export class CollectionsService {
       ...record,
       productCount: counts.get(record.id) ?? 0,
       cover: covers.get(record.id) ?? null,
+      rooms: rooms.get(record.id) ?? [],
     }));
     return buildPaginatedResult({ items, page, pageSize, total: matching.length });
   }
@@ -117,46 +121,52 @@ export class CollectionsService {
     return this.toView(record);
   }
 
-  /** Creates a collection; fails with 409 SLUG_TAKEN on a duplicate slug. */
+  /** Creates a collection, shown in `roomIds`; fails with 409 SLUG_TAKEN on a duplicate slug, 404 ROOM_NOT_FOUND. */
   async create(dto: CreateCollectionDto): Promise<CollectionDetailView> {
-    const { slug: explicitSlug, ...fields } = dto;
+    const { slug: explicitSlug, roomIds, ...fields } = dto;
     const slug: string = resolveSlugCandidate({
       name: dto.name,
       slug: explicitSlug,
       maxLength: COLLECTION_SLUG_MAX_LENGTH,
     });
     await this.assertSlugAvailable({ slug });
+    if (roomIds !== undefined) {
+      await this.roomCollectionsService.assertRoomsReplaceable({ roomIds });
+    }
     try {
       const sortOrder: number = fields.sortOrder ?? (await this.collectionsRepository.nextSortOrder());
       const record: CollectionRecord = await this.collectionsRepository.insert({ ...fields, slug, sortOrder });
       await this.slugRedirectsService.release({ entity: 'collection', slug });
+      if (roomIds !== undefined) {
+        await this.roomCollectionsService.replaceRoomsOf({ collectionId: record.id, roomIds });
+      }
       return await this.toView(record);
     } catch (err) {
       throw isUniqueViolation(err) ? new SlugTakenException(slug) : err;
     }
   }
 
-  /** Updates a collection; a changed slug is stored in `slug_redirect`. */
+  /**
+   * Updates a collection; a changed slug is stored in `slug_redirect`, `roomIds` replaces the rooms that show it.
+   * Fails with 409 COLLECTION_HAS_SOLUTIONS_IN_ROOM when it would leave a room that has its solutions.
+   */
   async update(id: string, dto: UpdateCollectionDto): Promise<CollectionDetailView> {
     assertNoNullFields({ dto, nullableFields: NULLABLE_FIELDS });
     const existing: CollectionRecord = await this.getRecordOrThrow(id);
-    const patch: CollectionPatch = Object.assign({}, dto);
+    const { roomIds, ...fields } = dto;
+    const patch: CollectionPatch = Object.assign({}, fields);
     const isSlugChanged: boolean = dto.slug !== undefined && dto.slug !== existing.slug;
     if (isSlugChanged && dto.slug !== undefined) {
       await this.assertSlugAvailable({ slug: dto.slug, excludeId: id });
     }
-    if (!hasDefinedValues(patch)) {
-      return this.toView(existing);
+    if (roomIds !== undefined) {
+      await this.roomCollectionsService.assertRoomsReplaceable({ collectionId: id, roomIds });
     }
-    let updated: CollectionRecord;
-    try {
-      updated = await this.collectionsRepository.update({ id, patch });
-    } catch (err) {
-      throw isUniqueViolation(err) && dto.slug !== undefined ? new SlugTakenException(dto.slug) : err;
-    }
-    if (isSlugChanged) {
-      await this.slugRedirectsService.recordChange({ entity: 'collection', oldSlug: existing.slug, targetId: id });
-      await this.slugRedirectsService.release({ entity: 'collection', slug: updated.slug });
+    const updated: CollectionRecord = hasDefinedValues(patch)
+      ? await this.saveChanges({ id, patch, slug: dto.slug, existing })
+      : existing;
+    if (roomIds !== undefined) {
+      await this.roomCollectionsService.replaceRoomsOf({ collectionId: id, roomIds });
     }
     return this.toView(updated);
   }
@@ -224,12 +234,37 @@ export class CollectionsService {
     return record;
   }
 
+  private async saveChanges({
+    id,
+    patch,
+    slug,
+    existing,
+  }: {
+    id: string;
+    patch: CollectionPatch;
+    slug: string | undefined;
+    existing: CollectionRecord;
+  }): Promise<CollectionRecord> {
+    let updated: CollectionRecord;
+    try {
+      updated = await this.collectionsRepository.update({ id, patch });
+    } catch (err) {
+      throw isUniqueViolation(err) && slug !== undefined ? new SlugTakenException(slug) : err;
+    }
+    if (slug !== undefined && slug !== existing.slug) {
+      await this.slugRedirectsService.recordChange({ entity: 'collection', oldSlug: existing.slug, targetId: id });
+      await this.slugRedirectsService.release({ entity: 'collection', slug: updated.slug });
+    }
+    return updated;
+  }
+
   private async toView(record: CollectionRecord): Promise<CollectionDetailView> {
-    const [productCount, images] = await Promise.all([
+    const [productCount, images, rooms] = await Promise.all([
       this.collectionsRepository.countProducts(record.id),
       this.mediaService.listImages({ entityType: 'collection', entityId: record.id }),
+      this.roomCollectionsService.listRoomsOf(record.id),
     ]);
-    return { ...record, productCount, cover: getCover(images), images };
+    return { ...record, productCount, cover: getCover(images), images, rooms };
   }
 
   private async assertSlugAvailable({ slug, excludeId }: { slug: string; excludeId?: string }): Promise<void> {

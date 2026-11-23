@@ -2,7 +2,10 @@ import { integer, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core';
 import { collection } from './collection.js';
 import { room } from './room.js';
 
-/** Collection shown in a consultation-only room (kitchens); `sortOrder` is its place in that room. */
+/**
+ * Collection shown in a room; `sortOrder` is its place in that room. Every room lists its collections here: a
+ * consultation-only room shows each of them, an ordinary room only those with published solutions in it.
+ */
 export const roomCollection = pgTable(
   'room_collection',
   {

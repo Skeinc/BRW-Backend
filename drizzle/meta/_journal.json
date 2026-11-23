@@ -92,6 +92,13 @@
       "when": 1794334301360,
       "tag": "0012_consultation_rooms",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795415958650,
+      "tag": "0013_room_collection_for_all_rooms",
+      "breakpoints": true
     }
   ]
 }

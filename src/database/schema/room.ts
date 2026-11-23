@@ -1,9 +1,9 @@
 import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 /**
- * Room of the house (living room, bedroom, ...) that groups ready-made solutions on the storefront. A room with
- * `isConsultationOnly` (kitchens) has no solutions: it shows the collections linked in `room_collection` with photos,
- * a text and a contact block instead of the cart.
+ * Room of the house (living room, bedroom, ...) that shows the collections linked in `room_collection`. An ordinary
+ * room sells ready-made solutions of those collections. A room with `isConsultationOnly` (kitchens) has no solutions:
+ * it shows the collections with photos, a text and a contact block instead of the cart.
  */
 export const room = pgTable('room', {
   id: uuid('id').primaryKey().defaultRandom(),

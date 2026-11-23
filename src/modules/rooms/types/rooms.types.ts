@@ -27,7 +27,7 @@ export type PublicSolution = Pick<SolutionRecord, 'id' | 'name' | 'description' 
   products: PublicSolutionProduct[];
 };
 
-/** Collection linked to a consultation-only room. */
+/** Collection linked to a room. */
 export type RoomCollectionRef = { roomId: string; collectionId: string };
 
 /** A room card of the home page and the room list. */
@@ -38,14 +38,14 @@ export type PublicRoomItem = Pick<RoomRecord, 'id' | 'name' | 'isConsultationOnl
 
 /**
  * A collection card inside a room; the photo is the first solution picture of the collection in that room, or the
- * collection cover in a consultation-only room.
+ * collection cover when it has none (always in a consultation-only room).
  */
 export type PublicRoomCollection = Pick<CollectionRecord, 'id' | 'name'> & {
   imageUrl: string | null;
   solutionCount: number;
 };
 
-/** A published room with the collections that have solutions in it. */
+/** A published room with the collections it shows. */
 export type PublicRoomDetail = PublicRoomItem &
   Pick<RoomRecord, 'description' | 'seoTitle' | 'seoDescription'> & {
     collections: PublicRoomCollection[];

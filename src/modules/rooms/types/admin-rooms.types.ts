@@ -6,12 +6,26 @@ export type NewRoomValues = typeof room.$inferInsert;
 
 export type RoomPatch = Partial<Omit<NewRoomValues, 'id' | 'createdAt' | 'updatedAt'>>;
 
+/** A collection shown in a room, with the number of its solutions there (all, and published ones). */
+export type RoomCollectionLink = {
+  roomId: string;
+  collectionId: string;
+  solutionCount: number;
+  publishedSolutionCount: number;
+};
+
+/** A collection of a room as the admin room view lists it. */
+export type LinkedCollection = Omit<RoomCollectionLink, 'roomId'>;
+
+/** A room of a collection as the admin collection view lists it. */
+export type LinkedRoom = Omit<RoomCollectionLink, 'collectionId'>;
+
 /** Room as returned by the admin list. */
 export type RoomView = typeof room.$inferSelect & {
   cover: MediaCover | null;
   solutionCount: number;
-  /** Collections shown in a consultation-only room, in display order. */
-  collectionIds: string[];
+  /** Collections shown in the room, in display order. */
+  collections: LinkedCollection[];
 };
 
 /** A room with its image gallery. */

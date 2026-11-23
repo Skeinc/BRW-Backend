@@ -27,7 +27,7 @@ export class RoomsService {
     private readonly mediaService: MediaService,
   ) {}
 
-  /** Published rooms with the number of their collections (with solutions, or linked in a consultation-only room). */
+  /** Published rooms with the number of the collections each one shows. */
   async listPublic(): Promise<PublicRoomItem[]> {
     const [rooms, refs, links] = await Promise.all([
       this.roomsRepository.findPublishedRooms(),
@@ -38,33 +38,35 @@ export class RoomsService {
     return rooms.map((record) => this.toRoomItem({ record, refs, links, covers }));
   }
 
-  /** One published room with its collection cards, in the order of the first solution of each collection; fails with 404 ROOM_NOT_FOUND. */
+  /**
+   * One published room with its collection cards in the order set in the room; an ordinary room shows only the
+   * collections with published solutions in it. Fails with 404 ROOM_NOT_FOUND.
+   */
   async getPublic(id: string): Promise<PublicRoomDetail> {
     const record: RoomRecord = await this.getPublishedRoomOrThrow(id);
-    if (record.isConsultationOnly) {
-      return this.getConsultationRoom(record);
-    }
-    const refs: SolutionRef[] = await this.roomsRepository.findPublishedSolutionRefs(id);
-    const orderedIds: string[] = [...new Set(refs.map(({ collectionId }) => collectionId))];
-    const found: CollectionRecord[] = await this.roomsRepository.findPublishedCollections(orderedIds);
-    const foundById = new Map<string, CollectionRecord>(found.map((item) => [item.id, item]));
-    const collections: CollectionRecord[] = orderedIds.flatMap((collectionId) => foundById.get(collectionId) ?? []);
-    const [roomCovers, solutionCovers] = await Promise.all([
+    const [refs, links] = await Promise.all([
+      this.roomsRepository.findPublishedSolutionRefs(id),
+      this.roomsRepository.findPublishedCollectionLinks(id),
+    ]);
+    const collectionIds: string[] = this.selectShownCollectionIds({ record, refs, links });
+    const [found, roomCovers, collectionCovers, solutionCovers] = await Promise.all([
+      this.roomsRepository.findPublishedCollections(collectionIds),
       this.mediaService.getCovers({ entityType: 'room', entityIds: [id] }),
+      this.mediaService.getCovers({ entityType: 'collection', entityIds: collectionIds }),
       this.mediaService.getCovers({ entityType: 'solution', entityIds: refs.map((ref) => ref.id) }),
     ]);
-    const cards: PublicRoomCollection[] = collections.map((item) => {
-      const own: SolutionRef[] = refs.filter(({ collectionId }) => collectionId === item.id);
-      const imageUrl: string | null =
-        own.map(({ id: solutionId }) => solutionCovers.get(solutionId)?.url).find(Boolean) ?? null;
-      return { id: item.id, name: item.name, imageUrl, solutionCount: own.length };
+    const foundById = new Map<string, CollectionRecord>(found.map((item) => [item.id, item]));
+    const cards: PublicRoomCollection[] = collectionIds.flatMap((collectionId) => {
+      const item: CollectionRecord | undefined = foundById.get(collectionId);
+      return item === undefined ? [] : [this.toCollectionCard({ item, refs, collectionCovers, solutionCovers })];
     });
-    return this.toRoomDetail({ item: this.toRoomItem({ record, refs, links: [], covers: roomCovers }), record, cards });
+    const item: PublicRoomItem = this.toRoomItem({ record, refs, links, covers: roomCovers });
+    return this.toRoomDetail({ item, record, cards });
   }
 
   /**
    * A collection inside a room with its photos and published solutions; fails with 404 when the room or the collection
-   * is missing, when an ordinary room has no solutions of it, or when a consultation-only room does not show it.
+   * is missing, when the room does not show the collection, or when an ordinary room has no solutions of it.
    */
   async getCollectionInRoom({
     roomId,
@@ -78,8 +80,9 @@ export class RoomsService {
     if (collectionRecord === undefined || !collectionRecord.isPublished) {
       throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
     }
+    await this.assertCollectionShown({ roomId, collectionId });
     const solutions: PublicSolution[] = roomRecord.isConsultationOnly
-      ? await this.assertLinkedAndReturnNoSolutions({ roomId, collectionId })
+      ? []
       : await this.getSolutionsOrThrow({ roomId, collectionId });
     const images: MediaCoverImage[] = await this.listCoverImages({ entityType: 'collection', entityId: collectionId });
     return {
@@ -131,23 +134,44 @@ export class RoomsService {
     }));
   }
 
-  private async getConsultationRoom(record: RoomRecord): Promise<PublicRoomDetail> {
-    const links: RoomCollectionRef[] = await this.roomsRepository.findPublishedCollectionLinks(record.id);
-    const collectionIds: string[] = links.map(({ collectionId }) => collectionId);
-    const [found, roomCovers, collectionCovers] = await Promise.all([
-      this.roomsRepository.findPublishedCollections(collectionIds),
-      this.mediaService.getCovers({ entityType: 'room', entityIds: [record.id] }),
-      this.mediaService.getCovers({ entityType: 'collection', entityIds: collectionIds }),
-    ]);
-    const foundById = new Map<string, CollectionRecord>(found.map((item) => [item.id, item]));
-    const cards: PublicRoomCollection[] = collectionIds.flatMap((collectionId) => {
-      const item: CollectionRecord | undefined = foundById.get(collectionId);
-      return item === undefined
-        ? []
-        : [{ id: item.id, name: item.name, imageUrl: collectionCovers.get(item.id)?.url ?? null, solutionCount: 0 }];
-    });
-    const item: PublicRoomItem = this.toRoomItem({ record, refs: [], links, covers: roomCovers });
-    return this.toRoomDetail({ item, record, cards });
+  /** Ids of the collections a room shows, in its order: all linked ones, or in an ordinary room those with solutions. */
+  private selectShownCollectionIds({
+    record,
+    refs,
+    links,
+  }: {
+    record: RoomRecord;
+    refs: SolutionRef[];
+    links: RoomCollectionRef[];
+  }): string[] {
+    const linkedIds: string[] = links
+      .filter(({ roomId }) => roomId === record.id)
+      .map(({ collectionId }) => collectionId);
+    if (record.isConsultationOnly) {
+      return linkedIds;
+    }
+    const withSolutions: Set<string> = new Set(
+      refs.filter(({ roomId }) => roomId === record.id).map(({ collectionId }) => collectionId),
+    );
+    return linkedIds.filter((collectionId) => withSolutions.has(collectionId));
+  }
+
+  /** A collection card: the photo is the first solution picture of the collection in the room, else its cover. */
+  private toCollectionCard({
+    item,
+    refs,
+    collectionCovers,
+    solutionCovers,
+  }: {
+    item: CollectionRecord;
+    refs: SolutionRef[];
+    collectionCovers: Map<string, { url: string }>;
+    solutionCovers: Map<string, { url: string }>;
+  }): PublicRoomCollection {
+    const own: SolutionRef[] = refs.filter(({ collectionId }) => collectionId === item.id);
+    const solutionUrl: string | undefined = own.map(({ id }) => solutionCovers.get(id)?.url).find(Boolean);
+    const imageUrl: string | null = solutionUrl ?? collectionCovers.get(item.id)?.url ?? null;
+    return { id: item.id, name: item.name, imageUrl, solutionCount: own.length };
   }
 
   private toRoomDetail({
@@ -182,18 +206,17 @@ export class RoomsService {
     return this.toSolutions(records);
   }
 
-  private async assertLinkedAndReturnNoSolutions({
+  private async assertCollectionShown({
     roomId,
     collectionId,
   }: {
     roomId: string;
     collectionId: string;
-  }): Promise<PublicSolution[]> {
+  }): Promise<void> {
     const links: RoomCollectionRef[] = await this.roomsRepository.findPublishedCollectionLinks(roomId);
     if (!links.some((link) => link.collectionId === collectionId)) {
       throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
     }
-    return [];
   }
 
   private async listCoverImages(owner: { entityType: 'collection'; entityId: string }): Promise<MediaCoverImage[]> {
@@ -211,16 +234,12 @@ export class RoomsService {
     links: RoomCollectionRef[];
     covers: Map<string, { url: string }>;
   }): PublicRoomItem {
-    const source: { roomId: string; collectionId: string }[] = record.isConsultationOnly ? links : refs;
-    const collectionIds: Set<string> = new Set(
-      source.filter(({ roomId }) => roomId === record.id).map(({ collectionId }) => collectionId),
-    );
     return {
       id: record.id,
       name: record.name,
       isConsultationOnly: record.isConsultationOnly,
       imageUrl: covers.get(record.id)?.url ?? null,
-      collectionCount: collectionIds.size,
+      collectionCount: this.selectShownCollectionIds({ record, refs, links }).length,
     };
   }
 

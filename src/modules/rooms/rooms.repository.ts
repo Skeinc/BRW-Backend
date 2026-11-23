@@ -140,7 +140,7 @@ export class RoomsRepository {
       .orderBy(asc(solutionProduct.sortOrder), asc(product.name));
   }
 
-  /** Published collections linked to consultation-only rooms, in their order; optionally only those of one room. */
+  /** Published collections linked to rooms, in their order in each room; optionally only those of one room. */
   async findPublishedCollectionLinks(roomId?: string): Promise<RoomCollectionRef[]> {
     return this.db
       .select({ roomId: roomCollection.roomId, collectionId: roomCollection.collectionId })

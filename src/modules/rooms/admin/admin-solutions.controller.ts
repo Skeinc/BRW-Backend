@@ -43,14 +43,19 @@ export class AdminSolutionsController {
 
   /** Create a solution. */
   @Post()
-  @ApiOperation({ summary: 'Create a solution (ROOM_NOT_FOUND, COLLECTION_NOT_FOUND, PRODUCT_NOT_FOUND)' })
+  @ApiOperation({
+    summary:
+      'Create a solution (ROOM_NOT_FOUND, COLLECTION_NOT_FOUND, PRODUCT_NOT_FOUND, ROOM_CONSULTATION_ONLY, COLLECTION_NOT_IN_ROOM)',
+  })
   create(@Body() dto: CreateSolutionDto): Promise<SolutionDetailView> {
     return this.solutionsService.create(dto);
   }
 
   /** Update a solution. */
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a solution; productIds replaces the elements' })
+  @ApiOperation({
+    summary: 'Update a solution; productIds replaces the elements (ROOM_CONSULTATION_ONLY, COLLECTION_NOT_IN_ROOM)',
+  })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSolutionDto): Promise<SolutionDetailView> {
     return this.solutionsService.update(id, dto);
   }

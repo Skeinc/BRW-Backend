@@ -51,7 +51,9 @@ export class AdminRoomsController {
 
   /** Update a room. */
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a room; null clears a text field' })
+  @ApiOperation({
+    summary: 'Update a room; null clears a text field, collectionIds orders its collections (ROOM_HAS_SOLUTIONS)',
+  })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoomDto): Promise<RoomDetailView> {
     return this.roomsService.update(id, dto);
   }

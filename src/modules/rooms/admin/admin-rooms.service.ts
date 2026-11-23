@@ -13,15 +13,17 @@ import type { ListRoomsQueryDto } from '../dto/list-rooms-query.dto.js';
 import type { UpdateRoomDto } from '../dto/update-room.dto.js';
 import type { RoomDetailView, RoomPatch, RoomView } from '../types/admin-rooms.types.js';
 import type { RoomRecord } from '../types/rooms.types.js';
+import { AdminRoomCollectionsService } from './admin-room-collections.service.js';
 import { AdminRoomsRepository } from './admin-rooms.repository.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['description', 'seoTitle', 'seoDescription'];
 
-/** Business rules of rooms in the admin: order, publication and photos. */
+/** Business rules of rooms in the admin: order, publication, photos and the order of their collections. */
 @Injectable()
 export class AdminRoomsService {
   constructor(
     private readonly roomsRepository: AdminRoomsRepository,
+    private readonly roomCollectionsService: AdminRoomCollectionsService,
     private readonly mediaService: MediaService,
   ) {}
 
@@ -41,13 +43,13 @@ export class AdminRoomsService {
     });
     const [counts, links] = await Promise.all([
       this.roomsRepository.countSolutions(),
-      this.roomsRepository.findAllCollectionIds(),
+      this.roomCollectionsService.listCollectionsByRoom(),
     ]);
     const items: RoomView[] = pageRecords.map((record) => ({
       ...record,
       cover: covers.get(record.id) ?? null,
       solutionCount: counts.get(record.id) ?? 0,
-      collectionIds: links.get(record.id) ?? [],
+      collections: links.get(record.id) ?? [],
     }));
     return buildPaginatedResult({ items, page, pageSize, total: records.length });
   }
@@ -57,26 +59,25 @@ export class AdminRoomsService {
     return this.toDetail(await this.getRecordOrThrow(id));
   }
 
-  /** Creates a room at the end of the list. */
+  /** Creates a room at the end of the list, without collections: they are put into rooms from the collection form. */
   async create(dto: CreateRoomDto): Promise<RoomDetailView> {
     const sortOrder: number = await this.roomsRepository.nextSortOrder();
-    const { collectionIds, ...fields } = dto;
-    await this.assertCollectionsExist(collectionIds);
-    const record: RoomRecord = await this.roomsRepository.insert({ ...fields, sortOrder });
-    if (collectionIds !== undefined) {
-      await this.roomsRepository.replaceCollections({ roomId: record.id, collectionIds });
-    }
+    const { name, ...fields } = dto;
+    const record: RoomRecord = await this.roomsRepository.insert({ name, ...fields, sortOrder });
     return this.toDetail(record);
   }
 
-  /** Updates a room; `null` clears a text field, `collectionIds` replaces the linked collections. */
+  /**
+   * Updates a room; `null` clears a text field, `collectionIds` orders its collections. Fails with 409
+   * ROOM_HAS_SOLUTIONS when it turns consultation-only while it has solutions.
+   */
   async update(id: string, dto: UpdateRoomDto): Promise<RoomDetailView> {
     assertNoNullFields({ dto, nullableFields: NULLABLE_FIELDS });
     const existing: RoomRecord = await this.getRecordOrThrow(id);
     const { collectionIds, ...fields } = dto;
-    await this.assertCollectionsExist(collectionIds);
+    await this.assertModeChangeAllowed({ existing, isConsultationOnly: fields.isConsultationOnly });
     if (collectionIds !== undefined) {
-      await this.roomsRepository.replaceCollections({ roomId: id, collectionIds });
+      await this.roomCollectionsService.reorderCollectionsOf({ roomId: id, collectionIds });
     }
     const patch: RoomPatch = Object.assign({}, fields);
     if (!hasDefinedValues(patch)) {
@@ -113,18 +114,27 @@ export class AdminRoomsService {
     return record;
   }
 
-  private async assertCollectionsExist(collectionIds: string[] = []): Promise<void> {
-    if ((await this.roomsRepository.countExistingCollections(collectionIds)) !== collectionIds.length) {
-      throw new AppException(ErrorCode.COLLECTION_NOT_FOUND, HttpStatus.NOT_FOUND, 'Collection not found');
+  private async assertModeChangeAllowed({
+    existing,
+    isConsultationOnly,
+  }: {
+    existing: RoomRecord;
+    isConsultationOnly?: boolean;
+  }): Promise<void> {
+    if (isConsultationOnly !== true || existing.isConsultationOnly) {
+      return;
+    }
+    if ((await this.roomsRepository.countSolutionsOf(existing.id)) > 0) {
+      throw new AppException(ErrorCode.ROOM_HAS_SOLUTIONS, HttpStatus.CONFLICT, 'Room has solutions');
     }
   }
 
   private async toDetail(record: RoomRecord): Promise<RoomDetailView> {
-    const [images, solutionCount, collectionIds] = await Promise.all([
+    const [images, solutionCount, collections] = await Promise.all([
       this.mediaService.listImages({ entityType: 'room', entityId: record.id }),
       this.roomsRepository.countSolutionsOf(record.id),
-      this.roomsRepository.findCollectionIds(record.id),
+      this.roomCollectionsService.listCollectionsOf(record.id),
     ]);
-    return { ...record, cover: getCover(images), solutionCount, images, collectionIds };
+    return { ...record, cover: getCover(images), solutionCount, images, collections };
   }
 }

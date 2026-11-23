@@ -10,6 +10,7 @@ import type { CreateSolutionDto } from '../dto/create-solution.dto.js';
 import type { ListSolutionsQueryDto } from '../dto/list-solutions-query.dto.js';
 import type { UpdateSolutionDto } from '../dto/update-solution.dto.js';
 import type { SolutionDetailView, SolutionPatch, SolutionRow, SolutionView } from '../types/admin-rooms.types.js';
+import { AdminRoomCollectionsService } from './admin-room-collections.service.js';
 import { AdminSolutionsRepository } from './admin-solutions.repository.js';
 
 const NULLABLE_FIELDS: readonly string[] = ['description'];
@@ -19,6 +20,7 @@ const NULLABLE_FIELDS: readonly string[] = ['description'];
 export class AdminSolutionsService {
   constructor(
     private readonly solutionsRepository: AdminSolutionsRepository,
+    private readonly roomCollectionsService: AdminRoomCollectionsService,
     private readonly mediaService: MediaService,
   ) {}
 
@@ -40,10 +42,14 @@ export class AdminSolutionsService {
     return this.toDetail(await this.getRowOrThrow(id));
   }
 
-  /** Creates a solution at the end of its room; room, collection and products must exist. */
+  /**
+   * Creates a solution at the end of its room; room, collection and products must exist, and the room must sell
+   * solutions and show the collection.
+   */
   async create(dto: CreateSolutionDto): Promise<SolutionDetailView> {
     const { productIds = [], roomId, collectionId, name, description, price, isPublished } = dto;
     await this.assertReferences({ roomId, collectionId, productIds });
+    await this.roomCollectionsService.assertSolutionAllowed({ roomId, collectionId });
     const sortOrder: number = await this.solutionsRepository.nextSortOrder(roomId);
     const id: string = await this.solutionsRepository.insert({
       values: { roomId, collectionId, name, description, price, isPublished, sortOrder },
@@ -59,6 +65,7 @@ export class AdminSolutionsService {
     const { productIds, ...rest } = dto;
     const patch: SolutionPatch = Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined));
     await this.assertReferences({ roomId: patch.roomId, collectionId: patch.collectionId, productIds });
+    await this.assertMoveAllowed({ existing, patch });
     if (patch.roomId !== undefined && patch.roomId !== existing.roomId) {
       patch.sortOrder = await this.solutionsRepository.nextSortOrder(patch.roomId);
     }
@@ -99,6 +106,14 @@ export class AdminSolutionsService {
       if (found.length !== productIds.length) {
         throw new AppException(ErrorCode.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND, 'Product not found');
       }
+    }
+  }
+
+  private async assertMoveAllowed({ existing, patch }: { existing: SolutionRow; patch: SolutionPatch }): Promise<void> {
+    const roomId: string = patch.roomId ?? existing.roomId;
+    const collectionId: string = patch.collectionId ?? existing.collectionId;
+    if (roomId !== existing.roomId || collectionId !== existing.collectionId) {
+      await this.roomCollectionsService.assertSolutionAllowed({ roomId, collectionId });
     }
   }
 

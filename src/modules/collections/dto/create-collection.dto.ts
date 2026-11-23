@@ -1,7 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { SLUG_PATTERN } from '../../../common/lib/slug-pattern.js';
+import { COLLECTION_MAX_ROOMS } from '../../rooms/constants/rooms.constants.js';
 import { COLLECTION_SLUG_MAX_LENGTH } from '../constants/collections.constants.js';
 
 const NAME_MAX_LENGTH = 120;
@@ -62,4 +76,16 @@ export class CreateCollectionDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Rooms that show the collection; replaces the current list. A new room gets the collection at its end. A room that still has solutions of the collection cannot be left out (COLLECTION_HAS_SOLUTIONS_IN_ROOM)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(COLLECTION_MAX_ROOMS)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  roomIds?: string[];
 }
