@@ -223,15 +223,6 @@ Seed-данных нет, каталог наполняется через ад�
 - CI на PR в `develop`: `typecheck`, `lint`, `format:check`. Тестов на бэкенде нет по решению проекта.
 - Соглашения по коду: [CLAUDE.md](CLAUDE.md).
 
-## Документация
-
-| Документ | О чём |
-| --- | --- |
-| [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) | компоненты, потоки данных, модель данных |
-| [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) | локальный запуск и процесс разработки |
-| [docs/DEPLOY.md](../docs/DEPLOY.md) | сервер, CI/CD, откат, бэкапы |
-| [docs/SEO-LAUNCH.md](../docs/SEO-LAUNCH.md) | чек-лист запуска и SEO |
-
 ---
 
 <div align="center">
